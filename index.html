@@ -4,6 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>בובו — קהילה יקרה</title>
+    <meta name="description" content="אי אפשר להסביר מה עברנו ביחד. אז בואו לפחות נלבש את זה עלינו ונבלבל את כולם!" />
+
+    <link rel="icon" type="image/png" href="assets/sticker_pic.png" />
+    <link rel="apple-touch-icon" href="assets/sticker_pic.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="בובו" />
+    <meta property="og:title" content="בובו — קהילה יקרה" />
+    <meta property="og:description" content="אי אפשר להסביר מה עברנו ביחד. אז בואו לפחות נלבש את זה עלינו ונבלבל את כולם!" />
+    <meta property="og:image" content="assets/sticker_pic.png" />
+    <meta property="og:image:alt" content="בובו — קהילה יקרה" />
+    <meta property="og:locale" content="he_IL" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="בובו — קהילה יקרה" />
+    <meta name="twitter:description" content="אי אפשר להסביר מה עברנו ביחד. אז בואו לפחות נלבש את זה עלינו ונבלבל את כולם!" />
+    <meta name="twitter:image" content="assets/sticker_pic.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -44,6 +61,10 @@
       }
       .product-image-container img { width: 100%; height: 100%; object-fit: cover; }
       .product-controls { width: 100%; max-width: 280px; display: flex; flex-direction: column; align-items: center; }
+
+      @media (max-width: 640px) {
+        .product-image-container img { object-fit: contain; }
+      }
       
       /* בורר סוג בעיצוב Pill (קפסולה) בהיר */
       .type-selector-pill { display: flex; gap: 6px; margin-top: 12px; margin-bottom: 12px; }

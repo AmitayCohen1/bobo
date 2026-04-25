@@ -4,7 +4,6 @@ import { BoboCard } from "./components/BoboCard";
 import { ChefCard } from "./components/ChefCard";
 import { GallerySection } from "./components/GallerySection";
 
-
 export default function Home() {
   return (
     <>

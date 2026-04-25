@@ -346,7 +346,8 @@
             if (typeInput) productName = `${typeInput.value} ${productName}`;
           }
           const finalName = link.dataset.hasColor ? `${productName} (${selectedBoboColor})` : productName;
-          window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=meitarbar@gmail.com&su=${encodeURIComponent('הזמנה: ' + finalName + ' | מידה ' + size)}&body=${encodeURIComponent('היוש,\n\nאני רוצה להזמין ' + finalName + ' במידה ' + size + '.\n\nטנקססס')}`);
+          const rlm = '‏';
+          window.open(`https://mail.google.com/mail/?view=cm&fs=1&hl=iw&to=meitarbar@gmail.com&su=${encodeURIComponent(rlm + 'הזמנה: ' + finalName + ' | מידה ' + size)}&body=${encodeURIComponent(rlm + 'היוש,\n\n' + rlm + 'אני רוצה להזמין ' + finalName + ' במידה ' + size + '.\n\n' + rlm + 'טנקססס')}`);
         };
       });
     </script>

@@ -11,10 +11,10 @@ export function LoginForm() {
   return (
     <form action={formAction} className="mt-5 flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-xs text-neutral-600">
-        מייל
+        שם משתמש
         <input
-          name="email"
-          type="email"
+          name="username"
+          type="text"
           autoComplete="username"
           required
           dir="ltr"

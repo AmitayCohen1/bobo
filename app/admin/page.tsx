@@ -32,7 +32,7 @@ export default async function AdminPage() {
               הזמנות
             </h1>
             <p className="mt-1 text-xs text-neutral-500">
-              {orders.length} הזמנות · מחובר כ־{session.email}
+              {orders.length} הזמנות · מחובר כ־{session.username}
             </p>
           </div>
           <form action={logoutAction}>

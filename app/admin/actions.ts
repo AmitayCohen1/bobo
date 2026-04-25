@@ -15,15 +15,17 @@ export async function loginAction(
   formData: FormData
 ): Promise<LoginState> {
   if (!isAdminConfigured()) {
-    return { error: "צריך להגדיר ADMIN_EMAIL ו־ADMIN_PASSWORD בקובץ .env.local" };
+    return {
+      error: "צריך להגדיר ADMIN_USERNAME ו־ADMIN_PASSWORD בקובץ .env.local",
+    };
   }
-  const email = String(formData.get("email") ?? "");
+  const username = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
-  if (!email || !password) return { error: "צריך להזין מייל וסיסמה" };
-  if (!checkAdminCredentials(email, password)) {
+  if (!username || !password) return { error: "צריך להזין שם משתמש וסיסמה" };
+  if (!checkAdminCredentials(username, password)) {
     return { error: "פרטי התחברות שגויים" };
   }
-  await startAdminSession(email);
+  await startAdminSession(username);
   redirect("/admin");
 }
 

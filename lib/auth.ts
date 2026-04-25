@@ -10,23 +10,23 @@ function getSecret(): string {
   return s;
 }
 
-function adminCreds(): { email: string; password: string } | null {
-  const email = process.env.ADMIN_EMAIL;
+function adminCreds(): { username: string; password: string } | null {
+  const username = process.env.ADMIN_USERNAME;
   const password = process.env.ADMIN_PASSWORD;
-  if (!email || !password) return null;
-  return { email, password };
+  if (!username || !password) return null;
+  return { username, password };
 }
 
 function sign(payload: string): string {
   return createHmac("sha256", getSecret()).update(payload).digest("hex");
 }
 
-function buildToken(email: string, expiresAt: number): string {
-  const payload = `${email}:${expiresAt}`;
+function buildToken(username: string, expiresAt: number): string {
+  const payload = `${username}:${expiresAt}`;
   return `${Buffer.from(payload).toString("base64url")}.${sign(payload)}`;
 }
 
-function verifyToken(token: string): { email: string } | null {
+function verifyToken(token: string): { username: string } | null {
   const dot = token.lastIndexOf(".");
   if (dot <= 0) return null;
   const encoded = token.slice(0, dot);
@@ -43,12 +43,12 @@ function verifyToken(token: string): { email: string } | null {
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   const colon = payload.lastIndexOf(":");
   if (colon < 0) return null;
-  const email = payload.slice(0, colon);
+  const username = payload.slice(0, colon);
   const expiresAt = Number(payload.slice(colon + 1));
   if (!Number.isFinite(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) {
     return null;
   }
-  return { email };
+  return { username };
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -58,15 +58,15 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
-export function checkAdminCredentials(email: string, password: string): boolean {
+export function checkAdminCredentials(username: string, password: string): boolean {
   const creds = adminCreds();
   if (!creds) return false;
-  return safeEqual(email.trim(), creds.email) && safeEqual(password, creds.password);
+  return safeEqual(username.trim(), creds.username) && safeEqual(password, creds.password);
 }
 
-export async function startAdminSession(email: string): Promise<void> {
+export async function startAdminSession(username: string): Promise<void> {
   const expiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
-  const token = buildToken(email, expiresAt);
+  const token = buildToken(username, expiresAt);
   const store = await cookies();
   store.set(COOKIE_NAME, token, {
     httpOnly: true,
@@ -82,7 +82,7 @@ export async function endAdminSession(): Promise<void> {
   store.delete(COOKIE_NAME);
 }
 
-export async function getAdminSession(): Promise<{ email: string } | null> {
+export async function getAdminSession(): Promise<{ username: string } | null> {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) return null;

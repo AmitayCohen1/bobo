@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { getAdminSession } from "@/lib/auth";
 
 export type CreateOrderInput = {
   product: string;
@@ -57,4 +58,17 @@ export async function createOrder(
 
   revalidatePath("/admin");
   return { ok: true };
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function deleteOrder(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  await sql`DELETE FROM orders WHERE id = ${id}`;
+  revalidatePath("/admin");
 }

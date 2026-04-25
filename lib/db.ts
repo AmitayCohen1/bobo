@@ -1,11 +1,17 @@
 import { neon } from "@neondatabase/serverless";
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  throw new Error("DATABASE_URL is not set");
+let cached: ReturnType<typeof neon> | null = null;
+
+function client(): ReturnType<typeof neon> {
+  if (cached) return cached;
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is not set");
+  cached = neon(url);
+  return cached;
 }
 
-export const sql = neon(url);
+export const sql = ((strings: TemplateStringsArray, ...values: unknown[]) =>
+  client()(strings, ...values)) as ReturnType<typeof neon>;
 
 export type Order = {
   id: string;

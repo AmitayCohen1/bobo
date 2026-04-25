@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>בובו — קהילה יקרה</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Arial", "sans-serif"] },
+            colors: { ink: "#171717", brand: "#333333" },
+          },
+        },
+      };
+    </script>
+    <style>
+      h1 { font-style: italic; letter-spacing: -0.02em !important; font-family: Arial, sans-serif; }
+      h2, p { letter-spacing: -0.01em !important; }
+      
+      /* פופ-אפ מבצע (וידאו) */
+      #promo-popup { display: none; z-index: 100; }
+      .promo-wrapper {
+        position: relative; max-width: 550px; width: 90%;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        background-color: black; outline: none !important;
+      }
+      #promo-video-element:focus { outline: none !important; }
+      #promo-popup video.promo-vid { width: 100%; height: auto; display: block; }
+      .close-promo-btn {
+        position: absolute; top: 15px; right: 15px; color: white;
+        font-size: 28px; font-weight: 200; cursor: pointer;
+        opacity: 0.6; transition: opacity 0.2s; z-index: 101;
+      }
+      .close-promo-btn:hover { opacity: 1; }
+
+      /* מוצרים */
+      .product-title { font-size: 0.85rem; margin-bottom: 8px; }
+      .product-image-container {
+        width: 100%; max-width: 280px; height: 280px;
+        display: flex; align-items: center; justify-content: center;
+        background-color: white; overflow: hidden;
+      }
+      .product-image-container img { width: 100%; height: 100%; object-fit: cover; }
+      .product-controls { width: 100%; max-width: 280px; display: flex; flex-direction: column; align-items: center; }
+      
+      /* בורר סוג בעיצוב Pill (קפסולה) בהיר */
+      .type-selector-pill { display: flex; gap: 6px; margin-top: 12px; margin-bottom: 12px; }
+      .pill-option { cursor: pointer; position: relative; }
+      .pill-option input { display: none; }
+      .pill-visual {
+        display: flex; align-items: center; justify-content: center;
+        padding: 6px 20px; border-radius: 9999px; border: 1px solid #e5e5e5;
+        font-size: 11px; transition: all 0.2s; min-width: 80px;
+        background-color: white; color: #171717;
+      }
+      .pill-option input:checked + .pill-visual { 
+        background-color: #f5f5f5; border-color: #d4d4d4; font-weight: bold; 
+      }
+
+      /* בורר צבעים */
+      .color-selector { display: flex; gap: 12px; margin-top: 12px; margin-bottom: 12px; height: 28px; align-items: center; }
+      .color-circle { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #d4d4d4; cursor: pointer; transition: transform 0.2s; }
+      .color-circle.selected { transform: scale(1.15); border-color: #171717; }
+
+      /* בורר מידות בהיר */
+      .size-selector {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+        background-color: #e5e5e5; border: 1px solid #e5e5e5; width: 100%; margin: 8px 0 0 0;
+      }
+      .size-option {
+        background-color: white; color: #171717; display: flex; align-items: center; justify-content: center;
+        padding: 10px 0; font-size: 10px; cursor: pointer; transition: background-color 0.2s;
+      }
+      .size-option:has(input:checked) { background-color: #f5f5f5; font-weight: bold; }
+
+      .action-button, .action-notify {
+        display: flex; width: 100%; height: 48px; align-items: center; justify-content: center;
+        font-weight: bold; text-transform: uppercase; font-size: 11px;
+      }
+      .action-button { background-color: #333333; color: white; cursor: pointer; }
+      .action-notify { background-color: #f5f5f5; color: #737373; border: 1px solid #e5e5e5; font-weight: normal; cursor: default; }
+
+      /* סליידר (גלריה) */
+      .slider-container { width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw; overflow: hidden; height: 70vh; }
+      .slide { position: absolute; inset: 0; display: none; cursor: pointer; }
+      .slide.active { display: block; z-index: 10; }
+      .slide img { width: 100%; height: 100%; object-fit: cover; }
+      
+      .slider-nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 20; background: rgba(255,255,255,0.7); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 24px; }
+      .prev { right: 20px; } .next { left: 20px; }
+      
+      /* מודאל תמונות */
+      #image-modal { cursor: pointer; }
+      #image-modal-img { cursor: default; transition: none !important; }
+
+      .footer-note { font-size: 12px; color: #737373; margin-top: 60px; text-align: center; line-height: 1.6; }
+    </style>
+  </head>
+  <body class="bg-white font-sans text-ink antialiased overflow-x-hidden">
+    
+    <div id="promo-popup" class="fixed inset-0 items-center justify-center bg-black/70 backdrop-blur-sm" onclick="closePromoIfOutside(event)">
+        <div class="promo-wrapper" onclick="event.stopPropagation()">
+            <button onclick="closePromo()" class="close-promo-btn">&times;</button>
+            <video id="promo-video-element" class="promo-vid" autoplay muted playsinline poster="assets/sticker_pic.png">
+                <source src="assets/sticker_pic.mp4" type="video/mp4">
+            </video>
+        </div>
+    </div>
+
+    <header class="px-6 pb-8 pt-14 text-center md:pb-12 md:pt-20">
+      <div class="mx-auto max-w-3xl">
+        <h1 class="text-2xl font-normal tracking-tight text-neutral-900 md:text-3xl">קהילה יקרה</h1>
+        <div class="mt-3">
+            <p class="mx-auto max-w-xl text-xs font-light text-neutral-500 uppercase md:text-sm">אי אפשר להסביר מה עברנו ביחד.</p>
+            <p class="mx-auto max-w-xl text-xs font-light text-neutral-500 uppercase md:text-sm">אז בואו לפחות נלבש את זה עלינו ונבלבל את כולם!</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-6 pb-10 md:px-10">
+      <ul class="mx-auto grid max-w-5xl grid-cols-1 gap-x-10 gap-y-16 sm:grid-cols-2 lg:grid-cols-3 justify-center items-start">
+        
+        <li class="group flex flex-col items-center text-center">
+          <div class="product-image-container relative cursor-pointer" onclick="openProductModal(document.getElementById('sefer-img').src)">
+            <img id="sefer-img" src="assets/kiryat_sefer_shirt.png" class="transition-transform duration-700 group-hover:scale-110" />
+          </div>
+          <div class="product-controls">
+            
+            <div class="type-selector-pill">
+              <label class="pill-option">
+                <input type="radio" name="type-1" value="חולצה" checked onchange="updateSeferImage('assets/kiryat_sefer_shirt.png')" />
+                <div class="pill-visual">חולצה</div>
+              </label>
+              <label class="pill-option">
+                <input type="radio" name="type-1" value="סווטשירט" onchange="updateSeferImage('assets/hotel_bobo_sweatshirt.png')" />
+                <div class="pill-visual">סווטשירט</div>
+              </label>
+            </div>
+
+            <h2 class="product-title font-medium text-neutral-900 uppercase">דגם "מפוני קריית ספר"</h2>
+            
+            <div class="size-selector">
+              <label class="size-option"><input type="radio" name="size-1" value="M" class="sr-only" checked /><span>M</span></label>
+              <label class="size-option"><input type="radio" name="size-1" value="L" class="sr-only" /><span>L</span></label>
+              <label class="size-option"><input type="radio" name="size-1" value="XL" class="sr-only" /><span>XL</span></label>
+            </div>
+            <a class="action-button email-order" href="#" data-product="מפוני קריית ספר" data-size-group="size-1" data-type-group="type-1">להזמנה</a>
+          </div>
+        </li>
+
+        <li class="group flex flex-col items-center text-center">
+            <div class="product-image-container relative cursor-pointer" onclick="openProductModal(null, true)">
+              <img id="bobo-img" src="assets/hotel_bobo_shirt_green.png" class="transition-transform duration-700 group-hover:scale-110" />
+            </div>
+            <div class="product-controls">
+              <div class="color-selector">
+                  <div class="color-circle bg-[#5d4037]" onclick="updateBoboColor(this, 'assets/hotel_bobo_shirt_brown.png', 'חום')"></div>
+                  <div class="color-circle bg-[#2d4c3b] selected" onclick="updateBoboColor(this, 'assets/hotel_bobo_shirt_green.png', 'ירוק')"></div>
+              </div>
+              <h2 class="product-title font-medium text-neutral-900 uppercase">חולצת "מפוני הבובו"</h2>
+              <div class="size-selector">
+                  <label class="size-option"><input type="radio" name="size-2" value="M" class="sr-only" checked /><span>M</span></label>
+                  <label class="size-option"><input type="radio" name="size-2" value="L" class="sr-only" /><span>L</span></label>
+                  <label class="size-option"><input type="radio" name="size-2" value="XL" class="sr-only" /><span>XL</span></label>
+              </div>
+              <a class="action-button email-order" href="#" data-product="חולצת מפוני הבובו" data-size-group="size-2" data-has-color="true">להזמנה</a>
+            </div>
+        </li>
+
+        <li class="group flex flex-col items-center text-center opacity-75">
+            <div class="product-image-container relative cursor-pointer" onclick="openProductModal('assets/bless_the_chef_shirt.png')">
+              <img src="assets/bless_the_chef_shirt.png" class="transition-transform duration-700 group-hover:scale-110" />
+            </div>
+            <div class="product-controls">
+              <div class="h-[52px]"></div> 
+              <h2 class="product-title font-medium text-neutral-900 uppercase">חולצת רקמה "בעזרת השף"</h2>
+              <div class="size-selector opacity-50">
+                <div class="size-option">M</div><div class="size-option">L</div><div class="size-option">XL</div>
+              </div>
+              <div class="action-notify">אזל המלאי</div>
+            </div>
+        </li>
+      </ul>
+      
+      <div class="footer-note">
+          <p>* החולצות ימכרו במחירי עלות שיקבעו לפי מידת הביקוש</p>
+      </div>
+    </main>
+
+    <section class="mt-10 mb-20">
+      <div class="slider-container" id="main-slider">
+        <button class="slider-nav prev" id="prevSlide">&#10094;</button>
+        <button class="slider-nav next" id="nextSlide">&#10095;</button>
+        <div id="slides-wrapper"></div>
+      </div>
+    </section>
+
+    <div id="image-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/95 p-4" onclick="closeModalIfOutside(event)">
+      <button id="image-modal-close" class="absolute end-6 top-6 text-white text-4xl font-light hover:opacity-50 z-[70]" onclick="closeModal()">&times;</button>
+      
+      <div id="modal-nav-btns" class="hidden">
+        <div class="absolute right-10 top-1/2 text-white text-5xl cursor-pointer select-none z-[60]" onclick="changeGalleryImage(-1); event.stopPropagation();">&#10094;</div>
+        <div class="absolute left-10 top-1/2 text-white text-5xl cursor-pointer select-none z-[60]" onclick="changeGalleryImage(1); event.stopPropagation();">&#10095;</div>
+      </div>
+      
+      <img id="image-modal-img" src="" class="h-auto max-h-[90vh] w-auto max-w-[90vw] object-contain relative z-50" onclick="event.stopPropagation();" />
+    </div>
+
+    <script>
+      let selectedBoboColor = "ירוק";
+      let boboImgSrc = 'assets/hotel_bobo_shirt_green.png';
+      
+      // הכנת גלריית התמונות (17 תמונות)
+      const galleryImages = [];
+      for (let i = 1; i <= 17; i++) galleryImages.push(`assets/gallery ${i}.png`);
+      
+      window.onload = function() {
+        setTimeout(() => {
+            const promo = document.getElementById('promo-popup');
+            const video = document.getElementById('promo-video-element');
+            promo.style.display = 'flex';
+            if (video) { video.currentTime = 0; video.play(); }
+        }, 800);
+      };
+
+      // לוגיקת פופ-אפ וידאו
+      function closePromo() {
+        document.getElementById('promo-popup').style.display = 'none';
+        const video = document.getElementById('promo-video-element');
+        if (video) video.pause();
+      }
+      function closePromoIfOutside(event) {
+        if (event.target.id === 'promo-popup') closePromo();
+      }
+
+      // החלפת תמונות בבוררים
+      function updateSeferImage(src) { document.getElementById('sefer-img').src = src; }
+      function updateBoboColor(el, src, colorName) {
+        document.querySelectorAll('.color-circle').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        document.getElementById('bobo-img').src = src;
+        boboImgSrc = src;
+        selectedBoboColor = colorName;
+      }
+
+      // מודאל תמונות
+      const modal = document.getElementById("image-modal");
+      const modalImg = document.getElementById("image-modal-img");
+      const modalNav = document.getElementById("modal-nav-btns");
+      let currentGalleryIndex = 0;
+      let isGalleryMode = false;
+
+      function openProductModal(src, isBobo = false) {
+        isGalleryMode = false;
+        modalNav.classList.add('hidden');
+        modalImg.src = isBobo ? boboImgSrc : src;
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+      }
+
+      function openGalleryModal(index) {
+        isGalleryMode = true;
+        currentGalleryIndex = index;
+        modalNav.classList.remove('hidden');
+        modalImg.src = galleryImages[currentGalleryIndex];
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+      }
+
+      function closeModal() { modal.classList.add("hidden"); modal.classList.remove("flex"); }
+      function closeModalIfOutside(event) { if (event.target === modal) closeModal(); }
+
+      function changeGalleryImage(step) {
+        if (!isGalleryMode) return;
+        currentGalleryIndex = (currentGalleryIndex + step + galleryImages.length) % galleryImages.length;
+        modalImg.src = galleryImages[currentGalleryIndex];
+      }
+
+      // בניית הסליידר (גלריה)
+      let currentSlide = 0;
+      const wrapper = document.getElementById('slides-wrapper');
+      galleryImages.forEach((src, i) => {
+        const slide = document.createElement('div');
+        slide.className = `slide ${i === 0 ? 'active' : ''}`;
+        slide.innerHTML = `<img src="${src}" onclick="openGalleryModal(${i})">`;
+        wrapper.appendChild(slide);
+      });
+
+      function showSlide(n) {
+        const slides = document.querySelectorAll('.slide');
+        if(slides.length === 0) return;
+        slides[currentSlide].classList.remove('active');
+        currentSlide = (n + galleryImages.length) % galleryImages.length;
+        slides[currentSlide].classList.add('active');
+      }
+
+      setInterval(() => showSlide(currentSlide + 1), 2000);
+      document.getElementById('nextSlide').onclick = () => showSlide(currentSlide + 1);
+      document.getElementById('prevSlide').onclick = () => showSlide(currentSlide - 1);
+
+      // מקלדת
+      document.addEventListener('keydown', (e) => {
+        if (!modal.classList.contains('hidden')) {
+          if (isGalleryMode) {
+            if (e.key === "ArrowRight") changeGalleryImage(-1);
+            if (e.key === "ArrowLeft") changeGalleryImage(1);
+          }
+          if (e.key === "Escape") closeModal();
+        } 
+        else if (document.getElementById('promo-popup').style.display === 'flex') {
+            if (e.key === "Escape") closePromo();
+        }
+      });
+
+      // כפתור הזמנה
+      document.querySelectorAll("a.email-order").forEach(link => {
+        link.onclick = (e) => {
+          e.preventDefault();
+          const size = document.querySelector(`input[name="${link.dataset.sizeGroup}"]:checked`).value;
+          let productName = link.dataset.product;
+          if (link.dataset.typeGroup) {
+            const typeInput = document.querySelector(`input[name="${link.dataset.typeGroup}"]:checked`);
+            if (typeInput) productName = `${typeInput.value} ${productName}`;
+          }
+          const finalName = link.dataset.hasColor ? `${productName} (${selectedBoboColor})` : productName;
+          window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=meitarbar@gmail.com&su=${encodeURIComponent('הזמנה: ' + finalName + ' | מידה ' + size)}&body=${encodeURIComponent('היוש,\n\nאני רוצה להזמין ' + finalName + ' במידה ' + size + '.\n\nטנקססס')}`);
+        };
+      });
+    </script>
+  </body>
+</html>

@@ -10,7 +10,7 @@ type OrderSummary = {
   notes: string | null;
 };
 
-const SITE_URL = "https://bobo-six-theta.vercel.app";
+const SITE_URL = "https://bobo-xi-five.vercel.app";
 
 export async function notifyNewOrder(order: OrderSummary): Promise<void> {
   const url = process.env.SLACK_WEBHOOK_URL;

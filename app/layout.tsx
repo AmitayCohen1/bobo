@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const SITE_URL = "https://bobo-six-theta.vercel.app/";
-const COVER_URL = "https://bobo-six-theta.vercel.app/meitar_cover.png";
+const SITE_URL = "https://bobo-xi-five.vercel.app/";
+const COVER_URL = "https://bobo-xi-five.vercel.app/meitar_cover.png";
 const TITLE = "בובו — קהילה יקרה";
 const DESCRIPTION =
   "אי אפשר להסביר מה עברנו ביחד. אז בואו לפחות נלבש את זה עלינו ונבלבל את כולם!";

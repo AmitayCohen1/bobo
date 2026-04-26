@@ -19,7 +19,7 @@ export async function notifyNewOrder(order: OrderSummary): Promise<void> {
   const productLine = [order.product, order.color, order.variantType]
     .filter(Boolean)
     .join(" · ");
-  const headline = `🎉🎊✨ *קאצ'ינג!* 💰💸 *הזמנה חדשה!* ✨🎊🎉\n*${productLine}* — מידה ${order.size}`;
+  const headline = `🎉 *הזמנה חדשה!* 💰\n*${productLine}* — מידה ${order.size}`;
   const imageUrl = `${SITE_URL}${imagePathFor(order)}`;
 
   const blocks: unknown[] = [
@@ -53,7 +53,7 @@ export async function notifyNewOrder(order: OrderSummary): Promise<void> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: `🎉💰 הזמנה חדשה: ${productLine} (${order.name})`,
+        text: `🎉 הזמנה חדשה: ${productLine} (${order.name})`,
         blocks,
       }),
     });

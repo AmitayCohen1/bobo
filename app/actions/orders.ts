@@ -2,7 +2,9 @@
 
 import { sql } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { getAdminSession } from "@/lib/auth";
+import { notifyNewOrder } from "@/lib/notify";
 
 export type CreateOrderInput = {
   product: string;
@@ -55,6 +57,8 @@ export async function createOrder(
     INSERT INTO orders (product, variant_type, color, size, customer_name, phone, notes)
     VALUES (${product}, ${variantType}, ${color}, ${size}, ${name}, ${phone}, ${notes})
   `;
+
+  after(() => notifyNewOrder({ product, variantType, color, size, name, phone, notes }));
 
   revalidatePath("/admin");
   return { ok: true };

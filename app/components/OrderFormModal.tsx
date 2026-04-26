@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createOrder, type CreateOrderInput } from "@/app/actions/orders";
+import { imagePathFor } from "@/lib/product-image";
 
 type Props = {
   open: boolean;
@@ -67,7 +68,7 @@ export function OrderFormModal({ open, onClose, order }: Props) {
       setName("");
       setPhone("");
       setNotes("");
-      setTimeout(onClose, 1400);
+      setTimeout(onClose, 3200);
     } else {
       setError(errorMessages[res.error] ?? "משהו השתבש, נסו שוב");
     }
@@ -97,8 +98,28 @@ export function OrderFormModal({ open, onClose, order }: Props) {
         </p>
 
         {success ? (
-          <div className="mt-6 rounded border border-neutral-200 bg-neutral-50 p-4 text-center text-sm text-neutral-700">
-            ההזמנה נשלחה! ניצור איתך קשר בהקדם.
+          <div className="mt-6 flex flex-col items-center gap-3 text-center">
+            <div className="relative">
+              <span className="pointer-events-none absolute -top-2 -right-4 text-3xl animate-bounce">🎉</span>
+              <span className="pointer-events-none absolute -top-3 -left-4 text-3xl animate-bounce [animation-delay:120ms]">💰</span>
+              <span className="pointer-events-none absolute -bottom-1 -right-6 text-2xl animate-bounce [animation-delay:240ms]">🎊</span>
+              <span className="pointer-events-none absolute -bottom-2 -left-5 text-2xl animate-bounce [animation-delay:360ms]">✨</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imagePathFor(order)}
+                alt={productLabel}
+                className="h-44 w-auto object-contain"
+              />
+            </div>
+            <h3 className="text-base font-bold uppercase tracking-[-0.01em] text-neutral-900">
+              ההזמנה אושרה! 🎊
+            </h3>
+            <p className="text-xs text-neutral-600">
+              {productLabel} · מידה {order.size}
+            </p>
+            <p className="text-xs text-neutral-500">
+              ניצור איתך קשר בהקדם 💛
+            </p>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-5 flex flex-col gap-3">

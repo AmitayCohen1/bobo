@@ -1,3 +1,5 @@
+import { imagePathFor } from "./product-image";
+
 type OrderSummary = {
   product: string;
   variantType: string | null;
@@ -9,20 +11,6 @@ type OrderSummary = {
 };
 
 const SITE_URL = "https://bobo-six-theta.vercel.app";
-
-function imagePathFor(order: OrderSummary): string {
-  if (order.product === "חולצת מפוני הבובו") {
-    return order.color === "חום"
-      ? "/assets/hotel_bobo_shirt_brown.png"
-      : "/assets/hotel_bobo_shirt_green.png";
-  }
-  if (order.product === "מפוני קריית ספר") {
-    return order.variantType === "סווטשירט"
-      ? "/assets/hotel_bobo_sweatshirt.png"
-      : "/assets/kiryat_sefer_shirt.png";
-  }
-  return "/assets/favicon.ico";
-}
 
 export async function notifyNewOrder(order: OrderSummary): Promise<void> {
   const url = process.env.SLACK_WEBHOOK_URL;

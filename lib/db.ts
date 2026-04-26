@@ -25,3 +25,13 @@ export type Order = {
   status: string;
   created_at: string;
 };
+
+export type WaitlistEntry = {
+  id: string;
+  product: string;
+  size: string;
+  customer_name: string;
+  phone: string;
+  status: string;
+  created_at: string;
+};

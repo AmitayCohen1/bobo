@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-import { Inbox, LogOut, Package, Phone, StickyNote, User } from "lucide-react";
-import { sql, type Order } from "@/lib/db";
+import { Clock, Inbox, LogOut, Package, Phone, StickyNote, User } from "lucide-react";
+import { sql, type Order, type WaitlistEntry } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
 import { DeleteOrderButton } from "./DeleteOrderButton";
+import { DeleteWaitlistButton } from "./DeleteWaitlistButton";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
@@ -24,12 +25,20 @@ export default async function AdminPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
 
-  const orders = (await sql`
-    SELECT id, product, variant_type, color, size, customer_name, phone, notes, status, created_at
-    FROM orders
-    ORDER BY created_at DESC
-    LIMIT 500
-  `) as Order[];
+  const [orders, waitlist] = (await Promise.all([
+    sql`
+      SELECT id, product, variant_type, color, size, customer_name, phone, notes, status, created_at
+      FROM orders
+      ORDER BY created_at DESC
+      LIMIT 500
+    `,
+    sql`
+      SELECT id, product, size, customer_name, phone, status, created_at
+      FROM waitlist
+      ORDER BY created_at DESC
+      LIMIT 500
+    `,
+  ])) as [Order[], WaitlistEntry[]];
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
@@ -161,6 +170,112 @@ export default async function AdminPage() {
             </div>
           </>
         )}
+
+        <div className="mt-12">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-neutral-500" strokeWidth={1.75} />
+            <h2 className="text-sm font-medium tracking-[-0.01em] text-neutral-900">
+              רשימת המתנה
+            </h2>
+            <span className="text-[11px] text-neutral-500">({waitlist.length})</span>
+          </div>
+
+          {waitlist.length === 0 ? (
+            <div className="mt-4 flex flex-col items-center justify-center rounded border border-dashed border-neutral-300 bg-white px-6 py-10 text-center">
+              <p className="text-xs text-neutral-500">אין רישומים ברשימת המתנה</p>
+            </div>
+          ) : (
+            <>
+              {/* Mobile cards */}
+              <ul className="mt-4 flex flex-col gap-3 md:hidden">
+                {waitlist.map((w) => (
+                  <li
+                    key={w.id}
+                    className="rounded border border-neutral-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[11px] text-neutral-500">
+                          {dateFmt.format(new Date(w.created_at))}
+                        </span>
+                        <p className="mt-1 text-sm font-medium text-neutral-900">
+                          {w.product}
+                        </p>
+                        <p className="mt-0.5 text-xs text-neutral-500">מידה {w.size}</p>
+                      </div>
+                      <DeleteWaitlistButton id={w.id} label={w.customer_name} />
+                    </div>
+                    <div className="mt-3 flex flex-col gap-1.5 border-t border-neutral-100 pt-3 text-sm">
+                      <p className="flex items-center gap-2 text-neutral-700">
+                        <User className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.75} />
+                        {w.customer_name}
+                      </p>
+                      <a
+                        href={`tel:${w.phone}`}
+                        dir="ltr"
+                        className="flex items-center gap-2 text-neutral-700 hover:text-neutral-900"
+                      >
+                        <Phone className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.75} />
+                        <span>{w.phone}</span>
+                      </a>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Desktop table */}
+              <div className="mt-4 hidden overflow-hidden rounded border border-neutral-200 bg-white shadow-sm md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-sm">
+                    <thead className="bg-neutral-50 text-[11px] uppercase tracking-wide text-neutral-500">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">תאריך</th>
+                        <th className="px-4 py-3 font-medium">מוצר</th>
+                        <th className="px-4 py-3 font-medium">מידה</th>
+                        <th className="px-4 py-3 font-medium">לקוח</th>
+                        <th className="px-4 py-3 font-medium">טלפון</th>
+                        <th className="px-4 py-3 font-medium" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {waitlist.map((w) => (
+                        <tr
+                          key={w.id}
+                          className="border-t border-neutral-200 align-top transition-colors hover:bg-neutral-50"
+                        >
+                          <td className="whitespace-nowrap px-4 py-3 text-xs text-neutral-500">
+                            {dateFmt.format(new Date(w.created_at))}
+                          </td>
+                          <td className="px-4 py-3 text-neutral-900">{w.product}</td>
+                          <td className="px-4 py-3 text-neutral-900">{w.size}</td>
+                          <td className="px-4 py-3 text-neutral-900">{w.customer_name}</td>
+                          <td className="px-4 py-3 text-neutral-900" dir="ltr">
+                            <a
+                              href={`tel:${w.phone}`}
+                              className="inline-flex items-center gap-1.5 text-neutral-700 hover:text-neutral-900"
+                            >
+                              <Phone
+                                className="h-3.5 w-3.5 text-neutral-400"
+                                strokeWidth={1.75}
+                              />
+                              <span>{w.phone}</span>
+                            </a>
+                          </td>
+                          <td className="px-2 py-3 text-left">
+                            <DeleteWaitlistButton
+                              id={w.id}
+                              label={w.customer_name}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

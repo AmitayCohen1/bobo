@@ -64,3 +64,49 @@ export async function notifyNewOrder(order: OrderSummary): Promise<void> {
     console.error("slack notify threw", err);
   }
 }
+
+type WaitlistSummary = {
+  product: string;
+  size: string;
+  name: string;
+  phone: string;
+};
+
+export async function notifyNewWaitlistEntry(
+  entry: WaitlistSummary
+): Promise<void> {
+  const url = process.env.SLACK_WEBHOOK_URL;
+  if (!url) return;
+
+  const headline = `👀 *רישום לרשימת המתנה*\n*${entry.product}* — מידה ${entry.size}`;
+
+  const blocks: unknown[] = [
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: headline },
+    },
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*שם:*\n${entry.name}` },
+        { type: "mrkdwn", text: `*טלפון:*\n${entry.phone}` },
+      ],
+    },
+  ];
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: `👀 רישום לרשימת המתנה: ${entry.product} (${entry.name})`,
+        blocks,
+      }),
+    });
+    if (!res.ok) {
+      console.error("slack waitlist notify failed", res.status, await res.text());
+    }
+  } catch (err) {
+    console.error("slack waitlist notify threw", err);
+  }
+}

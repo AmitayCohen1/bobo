@@ -15,5 +15,8 @@ export function imagePathFor(order: ProductInfo): string {
       ? "/assets/hotel_bobo_sweatshirt.png"
       : "/assets/kiryat_sefer_shirt.png";
   }
+  if (order.product === "חולצת רקמה בעזרת השף") {
+    return "/assets/bless_the_chef_shirt.png";
+  }
   return "/assets/favicon.ico";
 }

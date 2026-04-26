@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const SITE_URL = "https://bobo-xi-five.vercel.app/";
@@ -48,6 +49,7 @@ export default function RootLayout({
     <html lang="he" dir="rtl">
       <body className="bg-white text-ink antialiased overflow-x-hidden">
         {children}
+        <Analytics />
       </body>
     </html>
   );

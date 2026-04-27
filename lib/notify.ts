@@ -83,6 +83,7 @@ type WaitlistSummary = {
   quantity: number;
   name: string;
   phone: string;
+  notes: string | null;
 };
 
 export async function notifyNewWaitlistEntry(
@@ -107,6 +108,13 @@ export async function notifyNewWaitlistEntry(
       ],
     },
   ];
+
+  if (entry.notes) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `📝 _${entry.notes}_` },
+    });
+  }
 
   try {
     const res = await fetch(url, {

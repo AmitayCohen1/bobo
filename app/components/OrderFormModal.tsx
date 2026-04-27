@@ -14,6 +14,7 @@ const errorMessages: Record<string, string> = {
   missing_product: "פרטי המוצר חסרים",
   missing_name: "צריך להזין שם",
   invalid_phone: "מספר טלפון לא תקין",
+  missing_heard_from: "צריך לציין מאיפה הגעת",
 };
 
 export function OrderFormModal({ open, onClose, order }: Props) {
@@ -55,14 +56,18 @@ export function OrderFormModal({ open, onClose, order }: Props) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!order) return;
-    setSubmitting(true);
-    setError(null);
     const heardFrom =
       heardFromSource === "בובו"
         ? "בובו"
         : heardFromSource === "אחר"
           ? heardFromOther.trim() || null
           : null;
+    if (!heardFrom) {
+      setError(errorMessages.missing_heard_from);
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
     const res = await createOrder({
       product: order.product,
       variantType: order.variantType ?? null,
@@ -198,7 +203,7 @@ export function OrderFormModal({ open, onClose, order }: Props) {
               />
             </label>
             <div className="flex flex-col gap-1.5 text-xs text-neutral-600">
-              <span>מאיפה הגעת אלינו? (אופציונלי)</span>
+              <span>מאיפה הגעת אלינו?</span>
               <div className="grid w-full grid-cols-2 gap-px border border-neutral-200 bg-neutral-200">
                 {(["בובו", "אחר"] as const).map((opt) => (
                   <label
@@ -209,6 +214,7 @@ export function OrderFormModal({ open, onClose, order }: Props) {
                       type="radio"
                       name="heard-from"
                       value={opt}
+                      required
                       checked={heardFromSource === opt}
                       onChange={() => setHeardFromSource(opt)}
                       className="sr-only"

@@ -66,6 +66,7 @@ export async function createOrder(
   if (!phone || phone.replace(/\D/g, "").length < 7) {
     return { ok: false, error: "invalid_phone" };
   }
+  if (!heardFrom) return { ok: false, error: "missing_heard_from" };
 
   await sql`
     INSERT INTO orders (product, variant_type, color, size, quantity, customer_name, phone, notes, heard_from)

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Clock, LogOut, Package, Phone, User } from "lucide-react";
+import { Clock, LogOut, Package, Phone, StickyNote, User } from "lucide-react";
 import { sql, type Order, type WaitlistEntry } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
@@ -35,7 +35,7 @@ export default async function AdminPage() {
       LIMIT 500
     `,
     sql`
-      SELECT id, product, size, quantity, customer_name, phone, admin_note, status, created_at
+      SELECT id, product, size, quantity, customer_name, phone, notes, admin_note, status, created_at
       FROM waitlist
       ORDER BY created_at DESC
       LIMIT 500
@@ -153,6 +153,15 @@ export default async function AdminPage() {
                         <Phone className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.75} />
                         <span>{w.phone}</span>
                       </a>
+                      {w.notes && (
+                        <p className="flex items-start gap-2 whitespace-pre-wrap text-neutral-700">
+                          <StickyNote
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400"
+                            strokeWidth={1.75}
+                          />
+                          <span>{w.notes}</span>
+                        </p>
+                      )}
                       <div className="mt-1">
                         <AdminNoteEditor
                           id={w.id}
@@ -177,6 +186,7 @@ export default async function AdminPage() {
                         <th className="px-4 py-3 font-medium">כמות</th>
                         <th className="px-4 py-3 font-medium">לקוח</th>
                         <th className="px-4 py-3 font-medium">טלפון</th>
+                        <th className="px-4 py-3 font-medium">הערות</th>
                         <th className="px-4 py-3 font-medium">הערה לעצמי</th>
                         <th className="px-4 py-3 font-medium" />
                       </tr>
@@ -209,6 +219,19 @@ export default async function AdminPage() {
                               />
                               <span>{w.phone}</span>
                             </a>
+                          </td>
+                          <td className="max-w-xs whitespace-pre-wrap px-4 py-3 text-neutral-700">
+                            {w.notes ? (
+                              <span className="inline-flex items-start gap-1.5">
+                                <StickyNote
+                                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400"
+                                  strokeWidth={1.75}
+                                />
+                                <span>{w.notes}</span>
+                              </span>
+                            ) : (
+                              <span className="text-neutral-300">—</span>
+                            )}
                           </td>
                           <td className="max-w-xs px-4 py-3 align-top">
                             <AdminNoteEditor

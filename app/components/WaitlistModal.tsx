@@ -19,6 +19,7 @@ const errorMessages: Record<string, string> = {
 export function WaitlistModal({ open, onClose, entry }: Props) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,12 +57,14 @@ export function WaitlistModal({ open, onClose, entry }: Props) {
       quantity,
       name,
       phone,
+      notes: notes || null,
     });
     setSubmitting(false);
     if (res.ok) {
       setSuccess(true);
       setName("");
       setPhone("");
+      setNotes("");
       setTimeout(onClose, 3200);
     } else {
       setError(errorMessages[res.error] ?? "משהו השתבש, נסו שוב");
@@ -168,6 +171,16 @@ export function WaitlistModal({ open, onClose, entry }: Props) {
                 maxLength={40}
                 dir="ltr"
                 className="h-10 border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none focus:border-neutral-500 text-right"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-neutral-600">
+              הערות (אופציונלי)
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                maxLength={1000}
+                rows={3}
+                className="resize-none border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500"
               />
             </label>
             {error && (

@@ -12,6 +12,7 @@ export type JoinWaitlistInput = {
   quantity?: number;
   name: string;
   phone: string;
+  notes?: string | null;
 };
 
 export type JoinWaitlistResult =
@@ -23,6 +24,7 @@ const MAX = {
   size: 16,
   name: 120,
   phone: 40,
+  notes: 1000,
 };
 
 const QUANTITY_MIN = 1;
@@ -46,6 +48,7 @@ export async function joinWaitlist(
   const name = trim(input.name, MAX.name);
   const phone = trim(input.phone, MAX.phone);
   const quantity = clampQuantity(input.quantity);
+  const notes = input.notes ? trim(input.notes, MAX.notes) : null;
 
   if (!product || !size) return { ok: false, error: "missing_product" };
   if (!name) return { ok: false, error: "missing_name" };
@@ -54,11 +57,11 @@ export async function joinWaitlist(
   }
 
   await sql`
-    INSERT INTO waitlist (product, size, quantity, customer_name, phone)
-    VALUES (${product}, ${size}, ${quantity}, ${name}, ${phone})
+    INSERT INTO waitlist (product, size, quantity, customer_name, phone, notes)
+    VALUES (${product}, ${size}, ${quantity}, ${name}, ${phone}, ${notes})
   `;
 
-  after(() => notifyNewWaitlistEntry({ product, size, quantity, name, phone }));
+  after(() => notifyNewWaitlistEntry({ product, size, quantity, name, phone, notes }));
 
   revalidatePath("/admin");
   return { ok: true };

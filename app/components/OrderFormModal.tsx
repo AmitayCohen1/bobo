@@ -170,14 +170,15 @@ export function OrderFormModal({ open, onClose, order }: Props) {
               </div>
             </div>
             <label className="flex flex-col gap-1 text-xs text-neutral-600">
-              שם
+              שם מלא
               <input
                 ref={nameRef}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
                 maxLength={120}
-                className="h-10 border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none focus:border-neutral-500"
+                placeholder="שם פרטי ושם משפחה"
+                className="h-10 border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-neutral-500"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs text-neutral-600">

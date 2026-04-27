@@ -65,3 +65,19 @@ export async function deleteWaitlistEntry(formData: FormData): Promise<void> {
   await sql`DELETE FROM waitlist WHERE id = ${id}`;
   revalidatePath("/admin");
 }
+
+const ADMIN_NOTE_MAX = 2000;
+
+export async function updateWaitlistAdminNote(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  const raw = String(formData.get("admin_note") ?? "").trim().slice(0, ADMIN_NOTE_MAX);
+  const value = raw.length > 0 ? raw : null;
+
+  await sql`UPDATE waitlist SET admin_note = ${value} WHERE id = ${id}`;
+  revalidatePath("/admin");
+}

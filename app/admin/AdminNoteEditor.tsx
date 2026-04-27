@@ -2,16 +2,17 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Pencil, NotebookPen, Check, X } from "lucide-react";
-import { updateOrderAdminNote } from "@/app/actions/orders";
 
 const MAX = 2000;
 
 export function AdminNoteEditor({
   id,
   initialNote,
+  action,
 }: {
   id: string;
   initialNote: string | null;
+  action: (formData: FormData) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initialNote ?? "");
@@ -43,7 +44,7 @@ export function AdminNoteEditor({
     fd.set("id", id);
     fd.set("admin_note", draft);
     startTransition(async () => {
-      await updateOrderAdminNote(fd);
+      await action(fd);
       setEditing(false);
     });
   }
@@ -57,7 +58,7 @@ export function AdminNoteEditor({
           className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-dashed border-amber-300 bg-amber-50/50 px-2 py-1 text-[11px] text-amber-700 transition-colors hover:bg-amber-50"
         >
           <NotebookPen className="h-3.5 w-3.5" strokeWidth={1.75} />
-          הוספת הערה לעצמי
+          הערה
         </button>
       );
     }

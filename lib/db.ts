@@ -34,6 +34,7 @@ export type WaitlistEntry = {
   size: string;
   customer_name: string;
   phone: string;
+  admin_note: string | null;
   status: string;
   created_at: string;
 };

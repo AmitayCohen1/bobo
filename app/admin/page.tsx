@@ -3,17 +3,23 @@ import { Clock, Inbox, LogOut, Megaphone, Package, Phone, StickyNote, User } fro
 import { sql, type Order, type WaitlistEntry } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
+import { updateOrderAdminNote } from "@/app/actions/orders";
+import { updateWaitlistAdminNote } from "@/app/actions/waitlist";
 import { DeleteOrderButton } from "./DeleteOrderButton";
 import { DeleteWaitlistButton } from "./DeleteWaitlistButton";
 import { AdminNoteEditor } from "./AdminNoteEditor";
 import { OrderSizeEditor } from "./OrderSizeEditor";
+import { ExportOrdersButton } from "./ExportOrdersButton";
+import { TabNav } from "./TabNav";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
 
 const dateFmt = new Intl.DateTimeFormat("he-IL", {
-  dateStyle: "short",
-  timeStyle: "short",
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
   timeZone: "Asia/Jerusalem",
 });
 
@@ -35,7 +41,7 @@ export default async function AdminPage() {
       LIMIT 500
     `,
     sql`
-      SELECT id, product, size, customer_name, phone, status, created_at
+      SELECT id, product, size, customer_name, phone, admin_note, status, created_at
       FROM waitlist
       ORDER BY created_at DESC
       LIMIT 500
@@ -44,8 +50,12 @@ export default async function AdminPage() {
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
+  const startOfWeek = new Date();
+  startOfWeek.setDate(startOfWeek.getDate() - 7);
   const totalCount = orders.length;
-  const newCount = orders.filter((o) => o.status === "new").length;
+  const weekCount = orders.filter(
+    (o) => new Date(o.created_at) >= startOfWeek
+  ).length;
   const todayCount = orders.filter(
     (o) => new Date(o.created_at) >= startOfToday
   ).length;
@@ -67,20 +77,25 @@ export default async function AdminPage() {
               </p>
             </div>
           </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded border border-neutral-300 bg-white px-3 py-2 text-[11px] uppercase tracking-wide text-neutral-700 transition-colors hover:bg-neutral-100 sm:w-auto"
-            >
-              <LogOut className="h-3.5 w-3.5" strokeWidth={1.75} />
-              התנתקות
-            </button>
-          </form>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <ExportOrdersButton orders={orders} />
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded border border-neutral-300 bg-white px-3 py-2 text-[11px] uppercase tracking-wide text-neutral-700 transition-colors hover:bg-neutral-100 sm:w-auto"
+              >
+                <LogOut className="h-3.5 w-3.5" strokeWidth={1.75} />
+                התנתקות
+              </button>
+            </form>
+          </div>
         </header>
+
+        <TabNav current="orders" />
 
         <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
           <Stat label="סה״כ" value={totalCount} />
-          <Stat label="חדשות" value={newCount} accent="emerald" />
+          <Stat label="השבוע" value={weekCount} accent="emerald" />
           <Stat label="היום" value={todayCount} />
         </div>
 
@@ -111,7 +126,6 @@ export default async function AdminPage() {
                       <th className="px-4 py-3 font-medium">טלפון</th>
                       <th className="px-4 py-3 font-medium">הערות</th>
                       <th className="px-4 py-3 font-medium">הערה לעצמי</th>
-                      <th className="px-4 py-3 font-medium">סטטוס</th>
                       <th className="px-4 py-3 font-medium" />
                     </tr>
                   </thead>
@@ -167,10 +181,11 @@ export default async function AdminPage() {
                           )}
                         </td>
                         <td className="max-w-xs px-4 py-3 align-top">
-                          <AdminNoteEditor id={o.id} initialNote={o.admin_note} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={o.status} />
+                          <AdminNoteEditor
+                            id={o.id}
+                            initialNote={o.admin_note}
+                            action={updateOrderAdminNote}
+                          />
                         </td>
                         <td className="px-2 py-3 text-left">
                           <DeleteOrderButton
@@ -234,6 +249,13 @@ export default async function AdminPage() {
                         <Phone className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.75} />
                         <span>{w.phone}</span>
                       </a>
+                      <div className="mt-1">
+                        <AdminNoteEditor
+                          id={w.id}
+                          initialNote={w.admin_note}
+                          action={updateWaitlistAdminNote}
+                        />
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -250,6 +272,7 @@ export default async function AdminPage() {
                         <th className="px-4 py-3 font-medium">מידה</th>
                         <th className="px-4 py-3 font-medium">לקוח</th>
                         <th className="px-4 py-3 font-medium">טלפון</th>
+                        <th className="px-4 py-3 font-medium">הערה לעצמי</th>
                         <th className="px-4 py-3 font-medium" />
                       </tr>
                     </thead>
@@ -276,6 +299,13 @@ export default async function AdminPage() {
                               />
                               <span>{w.phone}</span>
                             </a>
+                          </td>
+                          <td className="max-w-xs px-4 py-3 align-top">
+                            <AdminNoteEditor
+                              id={w.id}
+                              initialNote={w.admin_note}
+                              action={updateWaitlistAdminNote}
+                            />
                           </td>
                           <td className="px-2 py-3 text-left">
                             <DeleteWaitlistButton
@@ -320,33 +350,14 @@ function Stat({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const isNew = status === "new";
-  const styles = isNew
-    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-    : "bg-neutral-100 text-neutral-600 border-neutral-200";
-  const dot = isNew ? "bg-emerald-500" : "bg-neutral-400";
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${styles}`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-      {status}
-    </span>
-  );
-}
-
 function OrderCard({ order: o }: { order: Order }) {
   return (
     <li className="rounded border border-neutral-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <StatusBadge status={o.status} />
-            <span className="text-[11px] text-neutral-500">
-              {dateFmt.format(new Date(o.created_at))}
-            </span>
-          </div>
+          <span className="text-[11px] text-neutral-500">
+            {dateFmt.format(new Date(o.created_at))}
+          </span>
           <p className="mt-2 text-sm font-medium text-neutral-900">
             {productLabel(o)}
           </p>
@@ -386,7 +397,11 @@ function OrderCard({ order: o }: { order: Order }) {
           </p>
         )}
         <div className="mt-1">
-          <AdminNoteEditor id={o.id} initialNote={o.admin_note} />
+          <AdminNoteEditor
+            id={o.id}
+            initialNote={o.admin_note}
+            action={updateOrderAdminNote}
+          />
         </div>
       </div>
     </li>

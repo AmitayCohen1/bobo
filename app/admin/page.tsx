@@ -1,16 +1,14 @@
 import { redirect } from "next/navigation";
-import { Clock, Inbox, LogOut, Megaphone, Package, Phone, StickyNote, User } from "lucide-react";
+import { Clock, LogOut, Package, Phone, User } from "lucide-react";
 import { sql, type Order, type WaitlistEntry } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
-import { updateOrderAdminNote } from "@/app/actions/orders";
 import { updateWaitlistAdminNote } from "@/app/actions/waitlist";
-import { DeleteOrderButton } from "./DeleteOrderButton";
 import { DeleteWaitlistButton } from "./DeleteWaitlistButton";
 import { AdminNoteEditor } from "./AdminNoteEditor";
-import { OrderSizeEditor } from "./OrderSizeEditor";
 import { ExportOrdersButton } from "./ExportOrdersButton";
 import { TabNav } from "./TabNav";
+import { OrdersView } from "./OrdersView";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
@@ -22,12 +20,6 @@ const dateFmt = new Intl.DateTimeFormat("he-IL", {
   minute: "2-digit",
   timeZone: "Asia/Jerusalem",
 });
-
-function productLabel(o: Order) {
-  return [o.variant_type, o.product, o.color && `(${o.color})`]
-    .filter(Boolean)
-    .join(" ");
-}
 
 export default async function AdminPage() {
   const session = await getAdminSession();
@@ -99,108 +91,7 @@ export default async function AdminPage() {
           <Stat label="היום" value={todayCount} />
         </div>
 
-        {orders.length === 0 ? (
-          <div className="mt-8 flex flex-col items-center justify-center rounded border border-dashed border-neutral-300 bg-white px-6 py-16 text-center">
-            <Inbox className="h-8 w-8 text-neutral-400" strokeWidth={1.5} />
-            <p className="mt-3 text-sm text-neutral-500">אין הזמנות עדיין</p>
-          </div>
-        ) : (
-          <>
-            {/* Mobile cards */}
-            <ul className="mt-6 flex flex-col gap-3 md:hidden">
-              {orders.map((o) => (
-                <OrderCard key={o.id} order={o} />
-              ))}
-            </ul>
-
-            {/* Desktop table */}
-            <div className="mt-6 hidden overflow-hidden rounded border border-neutral-200 bg-white shadow-sm md:block">
-              <div className="overflow-x-auto">
-                <table className="w-full text-right text-sm">
-                  <thead className="bg-neutral-50 text-[11px] uppercase tracking-wide text-neutral-500">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">תאריך</th>
-                      <th className="px-4 py-3 font-medium">מוצר</th>
-                      <th className="px-4 py-3 font-medium">מידה</th>
-                      <th className="px-4 py-3 font-medium">לקוח</th>
-                      <th className="px-4 py-3 font-medium">טלפון</th>
-                      <th className="px-4 py-3 font-medium">הערות</th>
-                      <th className="px-4 py-3 font-medium">הערה לעצמי</th>
-                      <th className="px-4 py-3 font-medium" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.map((o) => (
-                      <tr
-                        key={o.id}
-                        className="border-t border-neutral-200 align-top transition-colors hover:bg-neutral-50"
-                      >
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-neutral-500">
-                          {dateFmt.format(new Date(o.created_at))}
-                        </td>
-                        <td className="px-4 py-3 text-neutral-900">
-                          {productLabel(o)}
-                        </td>
-                        <td className="px-4 py-3 text-neutral-900">
-                          <OrderSizeEditor id={o.id} current={o.size} />
-                        </td>
-                        <td className="px-4 py-3 text-neutral-900">
-                          <div className="flex flex-col gap-1">
-                            <span>{o.customer_name}</span>
-                            {o.heard_from && (
-                              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700">
-                                <Megaphone className="h-3 w-3" strokeWidth={1.75} />
-                                {o.heard_from}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-neutral-900" dir="ltr">
-                          <a
-                            href={`tel:${o.phone}`}
-                            className="inline-flex items-center gap-1.5 text-neutral-700 hover:text-neutral-900"
-                          >
-                            <Phone
-                              className="h-3.5 w-3.5 text-neutral-400"
-                              strokeWidth={1.75}
-                            />
-                            <span>{o.phone}</span>
-                          </a>
-                        </td>
-                        <td className="max-w-xs whitespace-pre-wrap px-4 py-3 text-neutral-700">
-                          {o.notes ? (
-                            <span className="inline-flex items-start gap-1.5">
-                              <StickyNote
-                                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400"
-                                strokeWidth={1.75}
-                              />
-                              <span>{o.notes}</span>
-                            </span>
-                          ) : (
-                            <span className="text-neutral-300">—</span>
-                          )}
-                        </td>
-                        <td className="max-w-xs px-4 py-3 align-top">
-                          <AdminNoteEditor
-                            id={o.id}
-                            initialNote={o.admin_note}
-                            action={updateOrderAdminNote}
-                          />
-                        </td>
-                        <td className="px-2 py-3 text-left">
-                          <DeleteOrderButton
-                            id={o.id}
-                            label={o.customer_name}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        )}
+        <OrdersView orders={orders} />
 
         <div className="mt-12">
           <div className="flex items-center gap-2">
@@ -350,60 +241,3 @@ function Stat({
   );
 }
 
-function OrderCard({ order: o }: { order: Order }) {
-  return (
-    <li className="rounded border border-neutral-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <span className="text-[11px] text-neutral-500">
-            {dateFmt.format(new Date(o.created_at))}
-          </span>
-          <p className="mt-2 text-sm font-medium text-neutral-900">
-            {productLabel(o)}
-          </p>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-neutral-500">
-            <span>מידה</span>
-            <OrderSizeEditor id={o.id} current={o.size} />
-          </div>
-        </div>
-        <DeleteOrderButton id={o.id} label={o.customer_name} />
-      </div>
-      <div className="mt-3 flex flex-col gap-1.5 border-t border-neutral-100 pt-3 text-sm">
-        <p className="flex items-center gap-2 text-neutral-700">
-          <User className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.75} />
-          {o.customer_name}
-        </p>
-        <a
-          href={`tel:${o.phone}`}
-          dir="ltr"
-          className="flex items-center gap-2 text-neutral-700 hover:text-neutral-900"
-        >
-          <Phone className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.75} />
-          <span>{o.phone}</span>
-        </a>
-        {o.heard_from && (
-          <p className="flex items-center gap-2 text-sky-700">
-            <Megaphone className="h-3.5 w-3.5 text-sky-500" strokeWidth={1.75} />
-            <span className="text-xs">{o.heard_from}</span>
-          </p>
-        )}
-        {o.notes && (
-          <p className="flex items-start gap-2 whitespace-pre-wrap text-neutral-700">
-            <StickyNote
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400"
-              strokeWidth={1.75}
-            />
-            <span>{o.notes}</span>
-          </p>
-        )}
-        <div className="mt-1">
-          <AdminNoteEditor
-            id={o.id}
-            initialNote={o.admin_note}
-            action={updateOrderAdminNote}
-          />
-        </div>
-      </div>
-    </li>
-  );
-}

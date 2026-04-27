@@ -5,6 +5,15 @@ import { Check, Megaphone, Plus, X } from "lucide-react";
 import { updateOrderHeardFrom } from "@/app/actions/orders";
 
 const MAX = 80;
+const BOBO = "בובו";
+
+type Mode = "" | "בובו" | "אחר";
+
+function modeFromValue(value: string | null): Mode {
+  if (!value) return "";
+  if (value === BOBO) return BOBO;
+  return "אחר";
+}
 
 export function HeardFromEditor({
   id,
@@ -14,79 +23,125 @@ export function HeardFromEditor({
   initial: string | null;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(initial ?? "");
+  const [mode, setMode] = useState<Mode>(modeFromValue(initial));
+  const [otherText, setOtherText] = useState(
+    initial && initial !== BOBO ? initial : ""
+  );
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (editing) {
+    if (editing && mode === "אחר") {
       const el = inputRef.current;
       if (el) {
         el.focus();
         el.setSelectionRange(el.value.length, el.value.length);
       }
     }
-  }, [editing]);
+  }, [editing, mode]);
 
   function open() {
-    setDraft(initial ?? "");
+    setMode(modeFromValue(initial));
+    setOtherText(initial && initial !== BOBO ? initial : "");
     setEditing(true);
   }
 
   function cancel() {
     setEditing(false);
-    setDraft(initial ?? "");
+    setMode(modeFromValue(initial));
+    setOtherText(initial && initial !== BOBO ? initial : "");
   }
 
-  function save() {
+  function commit(value: string) {
     const fd = new FormData();
     fd.set("id", id);
-    fd.set("heard_from", draft.trim());
+    fd.set("heard_from", value);
     startTransition(async () => {
       await updateOrderHeardFrom(fd);
       setEditing(false);
     });
   }
 
+  function pickBobo() {
+    setMode(BOBO);
+    commit(BOBO);
+  }
+
+  function saveOther() {
+    const trimmed = otherText.trim();
+    if (!trimmed) return;
+    commit(trimmed);
+  }
+
   if (editing) {
     return (
-      <div className="inline-flex items-center gap-1 rounded border border-sky-300 bg-white p-0.5">
-        <input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value.slice(0, MAX))}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              e.preventDefault();
-              cancel();
-            } else if (e.key === "Enter") {
-              e.preventDefault();
-              save();
-            }
-          }}
-          disabled={pending}
-          maxLength={MAX}
-          placeholder="מקור"
-          className="h-6 w-28 rounded bg-white px-1.5 text-[11px] text-neutral-900 outline-none placeholder:text-sky-400 disabled:opacity-60"
-        />
-        <button
-          type="button"
-          onClick={save}
-          disabled={pending}
-          aria-label="שמור"
-          className="flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-sky-500 text-white transition-colors hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Check className="h-3 w-3" strokeWidth={2.5} />
-        </button>
-        <button
-          type="button"
-          onClick={cancel}
-          disabled={pending}
-          aria-label="ביטול"
-          className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-neutral-500 transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <X className="h-3 w-3" strokeWidth={2} />
-        </button>
+      <div className="inline-flex flex-col gap-1.5 rounded border border-sky-300 bg-white p-1.5">
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={pickBobo}
+            disabled={pending}
+            className={`cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              mode === BOBO
+                ? "border-sky-500 bg-sky-500 text-white"
+                : "border-sky-200 bg-white text-sky-700 hover:bg-sky-50"
+            }`}
+          >
+            {BOBO}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("אחר")}
+            disabled={pending}
+            className={`cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              mode === "אחר"
+                ? "border-sky-500 bg-sky-500 text-white"
+                : "border-sky-200 bg-white text-sky-700 hover:bg-sky-50"
+            }`}
+          >
+            אחר
+          </button>
+          <button
+            type="button"
+            onClick={cancel}
+            disabled={pending}
+            aria-label="ביטול"
+            className="ms-auto flex h-6 w-6 cursor-pointer items-center justify-center rounded text-neutral-500 transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <X className="h-3 w-3" strokeWidth={2} />
+          </button>
+        </div>
+        {mode === "אחר" && (
+          <div className="flex items-center gap-1">
+            <input
+              ref={inputRef}
+              value={otherText}
+              onChange={(e) => setOtherText(e.target.value.slice(0, MAX))}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  cancel();
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveOther();
+                }
+              }}
+              disabled={pending}
+              maxLength={MAX}
+              placeholder="פירוט"
+              className="h-6 w-32 rounded border border-sky-200 bg-white px-1.5 text-[11px] text-neutral-900 outline-none placeholder:text-sky-400 focus:border-sky-400 disabled:opacity-60"
+            />
+            <button
+              type="button"
+              onClick={saveOther}
+              disabled={pending || !otherText.trim()}
+              aria-label="שמור"
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-sky-500 text-white transition-colors hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Check className="h-3 w-3" strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
       </div>
     );
   }

@@ -6,7 +6,6 @@ import {
   Copy,
   Hash,
   Inbox,
-  Megaphone,
   NotebookPen,
   Package,
   Phone,
@@ -21,6 +20,7 @@ import { DeleteOrderButton } from "./DeleteOrderButton";
 import { AdminNoteEditor } from "./AdminNoteEditor";
 import { OrderSizeEditor } from "./OrderSizeEditor";
 import { OrderQuantityEditor } from "./OrderQuantityEditor";
+import { HeardFromEditor } from "./HeardFromEditor";
 
 const dateFmt = new Intl.DateTimeFormat("he-IL", {
   day: "2-digit",
@@ -534,14 +534,9 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
         <OrderQuantityEditor id={o.id} current={o.quantity} />
       </td>
       <td className="px-4 py-3 text-neutral-900">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col items-start gap-1">
           <span>{o.customer_name}</span>
-          {o.heard_from && (
-            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700">
-              <Megaphone className="h-3 w-3" strokeWidth={1.75} />
-              {o.heard_from}
-            </span>
-          )}
+          <HeardFromEditor id={o.id} initial={o.heard_from} />
         </div>
       </td>
       <td className="px-4 py-3 text-neutral-900">
@@ -613,12 +608,7 @@ function OrderCard({
           {o.customer_name}
         </p>
         <PhoneCell phone={o.phone} />
-        {o.heard_from && (
-          <p className="flex items-center gap-2 text-sky-700">
-            <Megaphone className="h-3.5 w-3.5 text-sky-500" strokeWidth={1.75} />
-            <span className="text-xs">{o.heard_from}</span>
-          </p>
-        )}
+        <HeardFromEditor id={o.id} initial={o.heard_from} />
         {o.notes && (
           <p className="flex items-start gap-2 whitespace-pre-wrap text-neutral-700">
             <StickyNote
@@ -711,12 +701,7 @@ function CustomerView({
                           <OrderQuantityEditor id={o.id} current={o.quantity} />
                         </div>
                       </div>
-                      {o.heard_from && (
-                        <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700">
-                          <Megaphone className="h-3 w-3" strokeWidth={1.75} />
-                          {o.heard_from}
-                        </span>
-                      )}
+                      <HeardFromEditor id={o.id} initial={o.heard_from} />
                       {o.notes && (
                         <p className="flex items-start gap-1.5 whitespace-pre-wrap text-xs text-neutral-700">
                           <StickyNote

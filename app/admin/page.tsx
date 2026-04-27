@@ -1,5 +1,15 @@
 import { redirect } from "next/navigation";
-import { Clock, LogOut, Package, Phone, StickyNote, User } from "lucide-react";
+import {
+  Clock,
+  Hash,
+  LogOut,
+  NotebookPen,
+  Package,
+  Phone,
+  Ruler,
+  StickyNote,
+  User,
+} from "lucide-react";
 import { sql, type Order, type WaitlistEntry } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
@@ -180,14 +190,14 @@ export default async function AdminPage() {
                   <table className="w-full text-right text-sm">
                     <thead className="bg-neutral-50 text-[11px] uppercase tracking-wide text-neutral-500">
                       <tr>
-                        <th className="px-4 py-3 font-medium">תאריך</th>
-                        <th className="px-4 py-3 font-medium">מוצר</th>
-                        <th className="px-4 py-3 font-medium">מידה</th>
-                        <th className="px-4 py-3 font-medium">כמות</th>
-                        <th className="px-4 py-3 font-medium">לקוח</th>
-                        <th className="px-4 py-3 font-medium">טלפון</th>
-                        <th className="px-4 py-3 font-medium">הערות</th>
-                        <th className="px-4 py-3 font-medium">הערה לעצמי</th>
+                        <Th icon={Clock}>תאריך</Th>
+                        <Th icon={Package}>מוצר</Th>
+                        <Th icon={Ruler}>מידה</Th>
+                        <Th icon={Hash}>כמות</Th>
+                        <Th icon={User}>לקוח</Th>
+                        <Th icon={Phone}>טלפון</Th>
+                        <Th icon={StickyNote}>הערות</Th>
+                        <Th icon={NotebookPen}>הערה לעצמי</Th>
                         <th className="px-4 py-3 font-medium" />
                       </tr>
                     </thead>
@@ -257,6 +267,23 @@ export default async function AdminPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function Th({
+  icon: Icon,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <th className="px-4 py-3 font-medium">
+      <span className="inline-flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.75} />
+        <span>{children}</span>
+      </span>
+    </th>
   );
 }
 

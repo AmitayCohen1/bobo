@@ -122,33 +122,33 @@ export default async function AnalyticsPage() {
 
   const [grouped, bySize, daily, bySource, total, weekRow, monthRow] = (await Promise.all([
     sql`
-      SELECT product, variant_type, color, size, COUNT(*)::int AS count
+      SELECT product, variant_type, color, size, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
       GROUP BY product, variant_type, color, size
       ORDER BY count DESC
     `,
     sql`
-      SELECT size, COUNT(*)::int AS count
+      SELECT size, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
       GROUP BY size
     `,
     sql`
-      SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'Asia/Jerusalem'), 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
+      SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'Asia/Jerusalem'), 'YYYY-MM-DD') AS day, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
       WHERE created_at >= NOW() - INTERVAL '30 days'
       GROUP BY day
       ORDER BY day
     `,
     sql`
-      SELECT heard_from, COUNT(*)::int AS count
+      SELECT heard_from, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
       WHERE heard_from IS NOT NULL AND heard_from <> ''
       GROUP BY heard_from
       ORDER BY count DESC
     `,
-    sql`SELECT COUNT(*)::int AS count FROM orders`,
-    sql`SELECT COUNT(*)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'`,
-    sql`SELECT COUNT(*)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'`,
   ])) as [
     GroupedItem[],
     SizeCount[],

@@ -19,6 +19,7 @@ export type Order = {
   variant_type: string | null;
   color: string | null;
   size: string;
+  quantity: number;
   customer_name: string;
   phone: string;
   notes: string | null;

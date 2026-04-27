@@ -443,6 +443,18 @@ function DupeBadge({ count }: { count: number }) {
   );
 }
 
+function QtyBadge({ quantity }: { quantity: number }) {
+  if (quantity <= 1) return null;
+  return (
+    <span
+      title="כמות"
+      className="inline-flex items-center rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-bold text-white tabular-nums"
+    >
+      ×{quantity}
+    </span>
+  );
+}
+
 function ChronoView({
   orders,
   dupeMap,
@@ -499,7 +511,10 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
       </td>
       <td className="px-4 py-3 text-neutral-900">
         <div className="flex flex-col gap-1">
-          <span>{productLabel(o)}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span>{productLabel(o)}</span>
+            <QtyBadge quantity={o.quantity} />
+          </div>
           <DupeBadge count={dupeCount} />
         </div>
       </td>
@@ -564,9 +579,12 @@ function OrderCard({
             </span>
             <DupeBadge count={dupeCount} />
           </div>
-          <p className="mt-2 text-sm font-medium text-neutral-900">
-            {productLabel(o)}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium text-neutral-900">
+              {productLabel(o)}
+            </p>
+            <QtyBadge quantity={o.quantity} />
+          </div>
           <div className="mt-1 flex items-center gap-1.5 text-xs text-neutral-500">
             <span>מידה</span>
             <OrderSizeEditor id={o.id} current={o.size} />
@@ -666,6 +684,7 @@ function CustomerView({
                         <span className="text-sm text-neutral-900">
                           {productLabel(o)}
                         </span>
+                        <QtyBadge quantity={o.quantity} />
                         <DupeBadge count={dupeCount} />
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-neutral-500">

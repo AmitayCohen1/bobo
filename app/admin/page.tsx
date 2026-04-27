@@ -27,7 +27,7 @@ export default async function AdminPage() {
 
   const [orders, waitlist] = (await Promise.all([
     sql`
-      SELECT id, product, variant_type, color, size, customer_name, phone, notes, admin_note, heard_from, status, created_at
+      SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, created_at
       FROM orders
       ORDER BY created_at DESC
       LIMIT 500
@@ -44,13 +44,15 @@ export default async function AdminPage() {
   startOfToday.setHours(0, 0, 0, 0);
   const startOfWeek = new Date();
   startOfWeek.setDate(startOfWeek.getDate() - 7);
-  const totalCount = orders.length;
-  const weekCount = orders.filter(
-    (o) => new Date(o.created_at) >= startOfWeek
-  ).length;
-  const todayCount = orders.filter(
-    (o) => new Date(o.created_at) >= startOfToday
-  ).length;
+  const sumQty = (rows: Order[]) =>
+    rows.reduce((acc, o) => acc + (o.quantity ?? 1), 0);
+  const totalCount = sumQty(orders);
+  const weekCount = sumQty(
+    orders.filter((o) => new Date(o.created_at) >= startOfWeek)
+  );
+  const todayCount = sumQty(
+    orders.filter((o) => new Date(o.created_at) >= startOfToday)
+  );
 
   return (
     <div className="min-h-screen bg-neutral-50 px-4 py-8 md:px-10 md:py-10">

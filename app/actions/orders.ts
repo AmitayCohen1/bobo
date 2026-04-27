@@ -11,6 +11,7 @@ export type CreateOrderInput = {
   variantType?: string | null;
   color?: string | null;
   size: string;
+  quantity?: number;
   name: string;
   phone: string;
   notes?: string | null;
@@ -32,6 +33,15 @@ const MAX = {
   heardFrom: 80,
 };
 
+const QUANTITY_MIN = 1;
+const QUANTITY_MAX = 10;
+
+function clampQuantity(value: unknown): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return QUANTITY_MIN;
+  return Math.min(QUANTITY_MAX, Math.max(QUANTITY_MIN, n));
+}
+
 function trim(value: unknown, max: number): string {
   return String(value ?? "").trim().slice(0, max);
 }
@@ -49,6 +59,7 @@ export async function createOrder(
   const phone = trim(input.phone, MAX.phone);
   const notes = input.notes ? trim(input.notes, MAX.notes) : null;
   const heardFrom = input.heardFrom ? trim(input.heardFrom, MAX.heardFrom) : null;
+  const quantity = clampQuantity(input.quantity);
 
   if (!product || !size) return { ok: false, error: "missing_product" };
   if (!name) return { ok: false, error: "missing_name" };
@@ -57,11 +68,11 @@ export async function createOrder(
   }
 
   await sql`
-    INSERT INTO orders (product, variant_type, color, size, customer_name, phone, notes, heard_from)
-    VALUES (${product}, ${variantType}, ${color}, ${size}, ${name}, ${phone}, ${notes}, ${heardFrom})
+    INSERT INTO orders (product, variant_type, color, size, quantity, customer_name, phone, notes, heard_from)
+    VALUES (${product}, ${variantType}, ${color}, ${size}, ${quantity}, ${name}, ${phone}, ${notes}, ${heardFrom})
   `;
 
-  after(() => notifyNewOrder({ product, variantType, color, size, name, phone, notes, heardFrom }));
+  after(() => notifyNewOrder({ product, variantType, color, size, quantity, name, phone, notes, heardFrom }));
 
   revalidatePath("/admin");
   return { ok: true };

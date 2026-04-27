@@ -14,6 +14,7 @@ type GroupedItem = {
   variant_type: string | null;
   color: string | null;
   size: string;
+  is_waitlist: boolean;
   count: number;
 };
 type SizeCount = { size: string; count: number };
@@ -78,11 +79,13 @@ type ProductRollup = {
   color: string | null;
   image: string;
   total: number;
+  waitlist: number;
   bySize: { size: string; count: number }[];
 };
 
 function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
   const map = new Map<string, ProductRollup>();
+  const sizeMap = new Map<string, Map<string, number>>();
   for (const r of rows) {
     const key = `${r.product}|${r.variant_type ?? ""}|${r.color ?? ""}`;
     let group = map.get(key);
@@ -98,19 +101,26 @@ function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
           color: r.color,
         }),
         total: 0,
+        waitlist: 0,
         bySize: [],
       };
       map.set(key, group);
+      sizeMap.set(key, new Map());
     }
     group.total += r.count;
-    group.bySize.push({ size: r.size, count: r.count });
+    if (r.is_waitlist) group.waitlist += r.count;
+    const sizeBucket = sizeMap.get(key)!;
+    sizeBucket.set(r.size, (sizeBucket.get(r.size) ?? 0) + r.count);
   }
   const all = Array.from(map.values());
   for (const g of all) {
-    g.bySize.sort(
-      (a, b) =>
-        SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)
-    );
+    const sizes = sizeMap.get(g.key)!;
+    g.bySize = Array.from(sizes.entries())
+      .map(([size, count]) => ({ size, count }))
+      .sort(
+        (a, b) =>
+          SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)
+      );
   }
   all.sort((a, b) => b.total - a.total);
   return all;
@@ -129,46 +139,36 @@ export default async function AnalyticsPage() {
     weekRow,
     monthRow,
     waitlistTotal,
-    waitlistGrouped,
   ] = (await Promise.all([
     sql`
-      SELECT product, variant_type, color, size, COALESCE(SUM(quantity), 0)::int AS count
+      SELECT product, variant_type, color, size, is_waitlist, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
-      WHERE is_waitlist = false
-      GROUP BY product, variant_type, color, size
+      GROUP BY product, variant_type, color, size, is_waitlist
       ORDER BY count DESC
     `,
     sql`
       SELECT size, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
-      WHERE is_waitlist = false
       GROUP BY size
     `,
     sql`
       SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'Asia/Jerusalem'), 'YYYY-MM-DD') AS day, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
-      WHERE is_waitlist = false AND created_at >= NOW() - INTERVAL '30 days'
+      WHERE created_at >= NOW() - INTERVAL '30 days'
       GROUP BY day
       ORDER BY day
     `,
     sql`
       SELECT heard_from, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
-      WHERE is_waitlist = false AND heard_from IS NOT NULL AND heard_from <> ''
+      WHERE heard_from IS NOT NULL AND heard_from <> ''
       GROUP BY heard_from
       ORDER BY count DESC
     `,
-    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = false`,
-    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = false AND created_at >= NOW() - INTERVAL '7 days'`,
-    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = false AND created_at >= NOW() - INTERVAL '30 days'`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'`,
     sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = true`,
-    sql`
-      SELECT product, variant_type, color, size, COALESCE(SUM(quantity), 0)::int AS count
-      FROM orders
-      WHERE is_waitlist = true
-      GROUP BY product, variant_type, color, size
-      ORDER BY count DESC
-    `,
   ])) as [
     GroupedItem[],
     SizeCount[],
@@ -178,7 +178,6 @@ export default async function AnalyticsPage() {
     SingleCount[],
     SingleCount[],
     SingleCount[],
-    GroupedItem[],
   ];
 
   const totalCount = total[0]?.count ?? 0;
@@ -187,7 +186,6 @@ export default async function AnalyticsPage() {
   const waitlistCount = waitlistTotal[0]?.count ?? 0;
 
   const products = rollupByProduct(grouped);
-  const waitlistProducts = rollupByProduct(waitlistGrouped);
   const days = fillDays(daily);
   const dailyMax = Math.max(1, ...days.map((d) => d.count));
 
@@ -304,17 +302,6 @@ export default async function AnalyticsPage() {
           )}
         </Section>
 
-        <Section title="רשימת המתנה לפי מוצר">
-          {waitlistProducts.length === 0 ? (
-            <Empty msg="אין רישומים ברשימת המתנה" />
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {waitlistProducts.map((p) => (
-                <ProductCard key={p.key} product={p} />
-              ))}
-            </div>
-          )}
-        </Section>
       </div>
     </div>
   );
@@ -410,6 +397,11 @@ function ProductCard({ product }: { product: ProductRollup }) {
           <p className="text-2xl font-medium leading-none text-neutral-900">
             {product.total}
           </p>
+          {product.waitlist > 0 && (
+            <p className="mt-1 text-[10px] text-amber-700">
+              מזה {product.waitlist} ברשימת המתנה
+            </p>
+          )}
         </div>
       </div>
       <div className="mt-5 flex flex-col gap-2">

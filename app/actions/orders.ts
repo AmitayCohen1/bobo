@@ -14,6 +14,7 @@ export type CreateOrderInput = {
   name: string;
   phone: string;
   notes?: string | null;
+  heardFrom?: string | null;
 };
 
 export type CreateOrderResult =
@@ -28,6 +29,7 @@ const MAX = {
   name: 120,
   phone: 40,
   notes: 1000,
+  heardFrom: 80,
 };
 
 function trim(value: unknown, max: number): string {
@@ -46,6 +48,7 @@ export async function createOrder(
   const name = trim(input.name, MAX.name);
   const phone = trim(input.phone, MAX.phone);
   const notes = input.notes ? trim(input.notes, MAX.notes) : null;
+  const heardFrom = input.heardFrom ? trim(input.heardFrom, MAX.heardFrom) : null;
 
   if (!product || !size) return { ok: false, error: "missing_product" };
   if (!name) return { ok: false, error: "missing_name" };
@@ -54,11 +57,11 @@ export async function createOrder(
   }
 
   await sql`
-    INSERT INTO orders (product, variant_type, color, size, customer_name, phone, notes)
-    VALUES (${product}, ${variantType}, ${color}, ${size}, ${name}, ${phone}, ${notes})
+    INSERT INTO orders (product, variant_type, color, size, customer_name, phone, notes, heard_from)
+    VALUES (${product}, ${variantType}, ${color}, ${size}, ${name}, ${phone}, ${notes}, ${heardFrom})
   `;
 
-  after(() => notifyNewOrder({ product, variantType, color, size, name, phone, notes }));
+  after(() => notifyNewOrder({ product, variantType, color, size, name, phone, notes, heardFrom }));
 
   revalidatePath("/admin");
   return { ok: true };
@@ -74,5 +77,37 @@ export async function deleteOrder(formData: FormData): Promise<void> {
   if (!UUID_RE.test(id)) throw new Error("invalid_id");
 
   await sql`DELETE FROM orders WHERE id = ${id}`;
+  revalidatePath("/admin");
+}
+
+const VALID_SIZES = new Set(["S", "M", "L", "XL"]);
+
+export async function updateOrderSize(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  const size = String(formData.get("size") ?? "").trim();
+  if (!VALID_SIZES.has(size)) throw new Error("invalid_size");
+
+  await sql`UPDATE orders SET size = ${size} WHERE id = ${id}`;
+  revalidatePath("/admin");
+}
+
+const ADMIN_NOTE_MAX = 2000;
+
+export async function updateOrderAdminNote(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  const raw = String(formData.get("admin_note") ?? "").trim().slice(0, ADMIN_NOTE_MAX);
+  const value = raw.length > 0 ? raw : null;
+
+  await sql`UPDATE orders SET admin_note = ${value} WHERE id = ${id}`;
   revalidatePath("/admin");
 }

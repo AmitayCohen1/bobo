@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
-import { Clock, Inbox, LogOut, Package, Phone, StickyNote, User } from "lucide-react";
+import { Clock, Inbox, LogOut, Megaphone, Package, Phone, StickyNote, User } from "lucide-react";
 import { sql, type Order, type WaitlistEntry } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
 import { DeleteOrderButton } from "./DeleteOrderButton";
 import { DeleteWaitlistButton } from "./DeleteWaitlistButton";
+import { AdminNoteEditor } from "./AdminNoteEditor";
+import { OrderSizeEditor } from "./OrderSizeEditor";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
@@ -27,7 +29,7 @@ export default async function AdminPage() {
 
   const [orders, waitlist] = (await Promise.all([
     sql`
-      SELECT id, product, variant_type, color, size, customer_name, phone, notes, status, created_at
+      SELECT id, product, variant_type, color, size, customer_name, phone, notes, admin_note, heard_from, status, created_at
       FROM orders
       ORDER BY created_at DESC
       LIMIT 500
@@ -108,6 +110,7 @@ export default async function AdminPage() {
                       <th className="px-4 py-3 font-medium">לקוח</th>
                       <th className="px-4 py-3 font-medium">טלפון</th>
                       <th className="px-4 py-3 font-medium">הערות</th>
+                      <th className="px-4 py-3 font-medium">הערה לעצמי</th>
                       <th className="px-4 py-3 font-medium">סטטוס</th>
                       <th className="px-4 py-3 font-medium" />
                     </tr>
@@ -124,9 +127,19 @@ export default async function AdminPage() {
                         <td className="px-4 py-3 text-neutral-900">
                           {productLabel(o)}
                         </td>
-                        <td className="px-4 py-3 text-neutral-900">{o.size}</td>
                         <td className="px-4 py-3 text-neutral-900">
-                          {o.customer_name}
+                          <OrderSizeEditor id={o.id} current={o.size} />
+                        </td>
+                        <td className="px-4 py-3 text-neutral-900">
+                          <div className="flex flex-col gap-1">
+                            <span>{o.customer_name}</span>
+                            {o.heard_from && (
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700">
+                                <Megaphone className="h-3 w-3" strokeWidth={1.75} />
+                                {o.heard_from}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-neutral-900" dir="ltr">
                           <a
@@ -152,6 +165,9 @@ export default async function AdminPage() {
                           ) : (
                             <span className="text-neutral-300">—</span>
                           )}
+                        </td>
+                        <td className="max-w-xs px-4 py-3 align-top">
+                          <AdminNoteEditor id={o.id} initialNote={o.admin_note} />
                         </td>
                         <td className="px-4 py-3">
                           <StatusBadge status={o.status} />
@@ -334,7 +350,10 @@ function OrderCard({ order: o }: { order: Order }) {
           <p className="mt-2 text-sm font-medium text-neutral-900">
             {productLabel(o)}
           </p>
-          <p className="mt-0.5 text-xs text-neutral-500">מידה {o.size}</p>
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-neutral-500">
+            <span>מידה</span>
+            <OrderSizeEditor id={o.id} current={o.size} />
+          </div>
         </div>
         <DeleteOrderButton id={o.id} label={o.customer_name} />
       </div>
@@ -351,6 +370,12 @@ function OrderCard({ order: o }: { order: Order }) {
           <Phone className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.75} />
           <span>{o.phone}</span>
         </a>
+        {o.heard_from && (
+          <p className="flex items-center gap-2 text-sky-700">
+            <Megaphone className="h-3.5 w-3.5 text-sky-500" strokeWidth={1.75} />
+            <span className="text-xs">{o.heard_from}</span>
+          </p>
+        )}
         {o.notes && (
           <p className="flex items-start gap-2 whitespace-pre-wrap text-neutral-700">
             <StickyNote
@@ -360,6 +385,9 @@ function OrderCard({ order: o }: { order: Order }) {
             <span>{o.notes}</span>
           </p>
         )}
+        <div className="mt-1">
+          <AdminNoteEditor id={o.id} initialNote={o.admin_note} />
+        </div>
       </div>
     </li>
   );

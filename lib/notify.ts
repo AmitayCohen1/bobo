@@ -8,6 +8,7 @@ type OrderSummary = {
   name: string;
   phone: string;
   notes: string | null;
+  heardFrom: string | null;
 };
 
 const SITE_URL = "https://bobo-xi-five.vercel.app";
@@ -45,6 +46,15 @@ export async function notifyNewOrder(order: OrderSummary): Promise<void> {
     blocks.push({
       type: "section",
       text: { type: "mrkdwn", text: `📝 _${order.notes}_` },
+    });
+  }
+
+  if (order.heardFrom) {
+    blocks.push({
+      type: "context",
+      elements: [
+        { type: "mrkdwn", text: `📣 שמע/ה עלינו דרך: *${order.heardFrom}*` },
+      ],
     });
   }
 

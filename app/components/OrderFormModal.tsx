@@ -20,6 +20,8 @@ export function OrderFormModal({ open, onClose, order }: Props) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [heardFromSource, setHeardFromSource] = useState<"" | "בובו" | "אחר">("");
+  const [heardFromOther, setHeardFromOther] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -53,6 +55,12 @@ export function OrderFormModal({ open, onClose, order }: Props) {
     if (!order) return;
     setSubmitting(true);
     setError(null);
+    const heardFrom =
+      heardFromSource === "בובו"
+        ? "בובו"
+        : heardFromSource === "אחר"
+          ? heardFromOther.trim() || null
+          : null;
     const res = await createOrder({
       product: order.product,
       variantType: order.variantType ?? null,
@@ -61,6 +69,7 @@ export function OrderFormModal({ open, onClose, order }: Props) {
       name,
       phone,
       notes: notes || null,
+      heardFrom,
     });
     setSubmitting(false);
     if (res.ok) {
@@ -68,6 +77,8 @@ export function OrderFormModal({ open, onClose, order }: Props) {
       setName("");
       setPhone("");
       setNotes("");
+      setHeardFromSource("");
+      setHeardFromOther("");
       setTimeout(onClose, 3200);
     } else {
       setError(errorMessages[res.error] ?? "משהו השתבש, נסו שוב");
@@ -150,6 +161,37 @@ export function OrderFormModal({ open, onClose, order }: Props) {
                 className="resize-none border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500"
               />
             </label>
+            <div className="flex flex-col gap-1.5 text-xs text-neutral-600">
+              <span>מאיפה הגעת אלינו? (אופציונלי)</span>
+              <div className="grid w-full grid-cols-2 gap-px border border-neutral-200 bg-neutral-200">
+                {(["בובו", "אחר"] as const).map((opt) => (
+                  <label
+                    key={opt}
+                    className="flex cursor-pointer items-center justify-center bg-white py-2 text-[11px] text-neutral-900 transition-colors has-[input:checked]:bg-neutral-100 has-[input:checked]:font-bold"
+                  >
+                    <input
+                      type="radio"
+                      name="heard-from"
+                      value={opt}
+                      checked={heardFromSource === opt}
+                      onChange={() => setHeardFromSource(opt)}
+                      className="sr-only"
+                    />
+                    <span>{opt}</span>
+                  </label>
+                ))}
+              </div>
+              {heardFromSource === "אחר" && (
+                <input
+                  value={heardFromOther}
+                  onChange={(e) => setHeardFromOther(e.target.value)}
+                  required
+                  maxLength={80}
+                  placeholder="פירוט"
+                  className="h-10 border border-neutral-200 bg-white px-3 text-sm text-neutral-900 outline-none focus:border-neutral-500"
+                />
+              )}
+            </div>
             {error && (
               <p className="text-xs text-red-600" role="alert">
                 {error}

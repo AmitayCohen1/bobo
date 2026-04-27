@@ -22,6 +22,8 @@ export type Order = {
   customer_name: string;
   phone: string;
   notes: string | null;
+  admin_note: string | null;
+  heard_from: string | null;
   status: string;
   created_at: string;
 };

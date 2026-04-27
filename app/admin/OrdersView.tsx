@@ -46,6 +46,25 @@ function dupeKey(o: Order): string {
   ].join("|");
 }
 
+function productKey(o: {
+  product: string;
+  variant_type: string | null;
+  color: string | null;
+}): string {
+  return `${o.product}|${o.variant_type ?? ""}|${o.color ?? ""}`;
+}
+
+function shortProductLabel(o: {
+  product: string;
+  variant_type: string | null;
+  color: string | null;
+}): string {
+  const stripped = o.product.replace(/^חולצת\s+/, "").replace(/^חולצה\s+/, "");
+  return [o.variant_type, stripped, o.color].filter(Boolean).join(" · ");
+}
+
+const SIZE_ORDER = ["S", "M", "L", "XL"];
+
 type Mode = "chrono" | "by-customer";
 
 type CustomerGroup = {
@@ -86,6 +105,12 @@ function groupByCustomer(orders: Order[]): CustomerGroup[] {
 export function OrdersView({ orders }: { orders: Order[] }) {
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<Mode>("chrono");
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [selectedSizes, setSelectedSizes] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const dupeMap = useMemo(() => {
     const m = new Map<string, number>();
@@ -96,27 +121,97 @@ export function OrdersView({ orders }: { orders: Order[] }) {
     return m;
   }, [orders]);
 
+  const productOptions = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        key: string;
+        label: string;
+        count: number;
+      }
+    >();
+    for (const o of orders) {
+      const key = productKey(o);
+      let g = map.get(key);
+      if (!g) {
+        g = { key, label: shortProductLabel(o), count: 0 };
+        map.set(key, g);
+      }
+      g.count += 1;
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [orders]);
+
+  const sizeOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const o of orders) {
+      counts.set(o.size, (counts.get(o.size) ?? 0) + 1);
+    }
+    return SIZE_ORDER.map((s) => ({
+      size: s,
+      count: counts.get(s) ?? 0,
+    }));
+  }, [orders]);
+
   const filtered = useMemo(() => {
+    let result = orders;
+    if (selectedProducts.size > 0) {
+      result = result.filter((o) => selectedProducts.has(productKey(o)));
+    }
+    if (selectedSizes.size > 0) {
+      result = result.filter((o) => selectedSizes.has(o.size));
+    }
     const q = query.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter((o) => {
-      const haystack = [
-        o.customer_name,
-        o.phone,
-        o.product,
-        o.variant_type,
-        o.color,
-        o.size,
-        o.notes,
-        o.admin_note,
-        o.heard_from,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
+    if (q) {
+      result = result.filter((o) => {
+        const haystack = [
+          o.customer_name,
+          o.phone,
+          o.product,
+          o.variant_type,
+          o.color,
+          o.size,
+          o.notes,
+          o.admin_note,
+          o.heard_from,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+    return result;
+  }, [orders, query, selectedProducts, selectedSizes]);
+
+  function toggleProduct(key: string) {
+    setSelectedProducts((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
-  }, [orders, query]);
+  }
+
+  function toggleSize(s: string) {
+    setSelectedSizes((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setSelectedProducts(new Set());
+    setSelectedSizes(new Set());
+  }
+
+  const hasActiveFilters =
+    query.trim().length > 0 ||
+    selectedProducts.size > 0 ||
+    selectedSizes.size > 0;
 
   if (orders.length === 0) {
     return (
@@ -156,11 +251,68 @@ export function OrdersView({ orders }: { orders: Order[] }) {
         </div>
       </div>
 
-      <p className="mt-2 text-[11px] text-neutral-500">
-        {filtered.length === orders.length
-          ? `${orders.length} הזמנות`
-          : `${filtered.length} מתוך ${orders.length}`}
-      </p>
+      <div className="mt-3 flex flex-col gap-2">
+        {productOptions.length > 1 && (
+          <ChipRow label="מוצר">
+            {productOptions.map((p) => (
+              <Chip
+                key={p.key}
+                active={selectedProducts.has(p.key)}
+                onClick={() => toggleProduct(p.key)}
+              >
+                <span>{p.label}</span>
+                <span
+                  className={`text-[9px] tabular-nums ${
+                    selectedProducts.has(p.key)
+                      ? "text-white/70"
+                      : "text-neutral-400"
+                  }`}
+                >
+                  {p.count}
+                </span>
+              </Chip>
+            ))}
+          </ChipRow>
+        )}
+        <ChipRow label="מידה">
+          {sizeOptions.map((s) => (
+            <Chip
+              key={s.size}
+              active={selectedSizes.has(s.size)}
+              disabled={s.count === 0}
+              onClick={() => toggleSize(s.size)}
+            >
+              <span>{s.size}</span>
+              <span
+                className={`text-[9px] tabular-nums ${
+                  selectedSizes.has(s.size)
+                    ? "text-white/70"
+                    : "text-neutral-400"
+                }`}
+              >
+                {s.count}
+              </span>
+            </Chip>
+          ))}
+        </ChipRow>
+      </div>
+
+      <div className="mt-2 flex items-center gap-3">
+        <p className="text-[11px] text-neutral-500">
+          {filtered.length === orders.length
+            ? `${orders.length} הזמנות`
+            : `${filtered.length} מתוך ${orders.length}`}
+        </p>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="cursor-pointer text-[11px] text-neutral-500 underline-offset-2 hover:text-neutral-900 hover:underline"
+          >
+            נקה סינון
+          </button>
+        )}
+      </div>
 
       {filtered.length === 0 ? (
         <div className="mt-4 rounded border border-dashed border-neutral-300 bg-white px-6 py-10 text-center">
@@ -172,6 +324,53 @@ export function OrdersView({ orders }: { orders: Order[] }) {
         <CustomerView orders={filtered} dupeMap={dupeMap} />
       )}
     </div>
+  );
+}
+
+function ChipRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="ml-1 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  disabled = false,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  const base =
+    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors";
+  const cls = disabled
+    ? `${base} cursor-not-allowed border-neutral-200 bg-white text-neutral-300`
+    : active
+      ? `${base} cursor-pointer border-neutral-900 bg-neutral-900 text-white`
+      : `${base} cursor-pointer border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50`;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cls}
+    >
+      {children}
+    </button>
   );
 }
 

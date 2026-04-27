@@ -19,6 +19,7 @@ const errorMessages: Record<string, string> = {
 export function WaitlistModal({ open, onClose, entry }: Props) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [quantity, setQuantity] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -28,6 +29,7 @@ export function WaitlistModal({ open, onClose, entry }: Props) {
     if (open) {
       setError(null);
       setSuccess(false);
+      setQuantity(1);
       setTimeout(() => nameRef.current?.focus(), 50);
     }
   }, [open]);
@@ -51,6 +53,7 @@ export function WaitlistModal({ open, onClose, entry }: Props) {
     const res = await joinWaitlist({
       product: entry.product,
       size: entry.size,
+      quantity,
       name,
       phone,
     });
@@ -64,6 +67,9 @@ export function WaitlistModal({ open, onClose, entry }: Props) {
       setError(errorMessages[res.error] ?? "משהו השתבש, נסו שוב");
     }
   }
+
+  const QTY_MIN = 1;
+  const QTY_MAX = 10;
 
   return (
     <div
@@ -104,6 +110,7 @@ export function WaitlistModal({ open, onClose, entry }: Props) {
             </h3>
             <p className="text-xs text-neutral-600">
               {entry.product} · מידה {entry.size}
+              {quantity > 1 ? ` · ×${quantity}` : ""}
             </p>
             <p className="text-xs text-neutral-500">
               ניצור איתך קשר ברגע שיהיה מלאי
@@ -111,6 +118,35 @@ export function WaitlistModal({ open, onClose, entry }: Props) {
           </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-5 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 border-b border-neutral-100 pb-3">
+              <span className="text-xs text-neutral-600">כמות</span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(QTY_MIN, q - 1))}
+                  disabled={quantity <= QTY_MIN}
+                  aria-label="הפחת כמות"
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center border border-neutral-200 bg-white text-base leading-none text-neutral-900 transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  −
+                </button>
+                <span
+                  aria-live="polite"
+                  className="min-w-[1.5rem] text-center text-sm font-bold tabular-nums text-neutral-900"
+                >
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.min(QTY_MAX, q + 1))}
+                  disabled={quantity >= QTY_MAX}
+                  aria-label="הוסף כמות"
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center border border-neutral-200 bg-white text-base leading-none text-neutral-900 transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  +
+                </button>
+              </div>
+            </div>
             <label className="flex flex-col gap-1 text-xs text-neutral-600">
               שם
               <input

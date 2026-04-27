@@ -9,6 +9,8 @@ import { AdminNoteEditor } from "./AdminNoteEditor";
 import { ExportOrdersButton } from "./ExportOrdersButton";
 import { TabNav } from "./TabNav";
 import { OrdersView } from "./OrdersView";
+import { WaitlistSizeEditor } from "./WaitlistSizeEditor";
+import { WaitlistQuantityEditor } from "./WaitlistQuantityEditor";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
@@ -33,7 +35,7 @@ export default async function AdminPage() {
       LIMIT 500
     `,
     sql`
-      SELECT id, product, size, customer_name, phone, admin_note, status, created_at
+      SELECT id, product, size, quantity, customer_name, phone, admin_note, status, created_at
       FROM waitlist
       ORDER BY created_at DESC
       LIMIT 500
@@ -125,7 +127,16 @@ export default async function AdminPage() {
                         <p className="mt-1 text-sm font-medium text-neutral-900">
                           {w.product}
                         </p>
-                        <p className="mt-0.5 text-xs text-neutral-500">מידה {w.size}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+                          <div className="flex items-center gap-1.5">
+                            <span>מידה</span>
+                            <WaitlistSizeEditor id={w.id} current={w.size} />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span>כמות</span>
+                            <WaitlistQuantityEditor id={w.id} current={w.quantity} />
+                          </div>
+                        </div>
                       </div>
                       <DeleteWaitlistButton id={w.id} label={w.customer_name} />
                     </div>
@@ -163,6 +174,7 @@ export default async function AdminPage() {
                         <th className="px-4 py-3 font-medium">תאריך</th>
                         <th className="px-4 py-3 font-medium">מוצר</th>
                         <th className="px-4 py-3 font-medium">מידה</th>
+                        <th className="px-4 py-3 font-medium">כמות</th>
                         <th className="px-4 py-3 font-medium">לקוח</th>
                         <th className="px-4 py-3 font-medium">טלפון</th>
                         <th className="px-4 py-3 font-medium">הערה לעצמי</th>
@@ -179,7 +191,12 @@ export default async function AdminPage() {
                             {dateFmt.format(new Date(w.created_at))}
                           </td>
                           <td className="px-4 py-3 text-neutral-900">{w.product}</td>
-                          <td className="px-4 py-3 text-neutral-900">{w.size}</td>
+                          <td className="px-4 py-3 text-neutral-900">
+                            <WaitlistSizeEditor id={w.id} current={w.size} />
+                          </td>
+                          <td className="px-4 py-3 text-neutral-900">
+                            <WaitlistQuantityEditor id={w.id} current={w.quantity} />
+                          </td>
                           <td className="px-4 py-3 text-neutral-900">{w.customer_name}</td>
                           <td className="px-4 py-3 text-neutral-900" dir="ltr">
                             <a

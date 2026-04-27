@@ -33,6 +33,7 @@ export type WaitlistEntry = {
   id: string;
   product: string;
   size: string;
+  quantity: number;
   customer_name: string;
   phone: string;
   admin_note: string | null;

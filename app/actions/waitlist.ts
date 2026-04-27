@@ -9,6 +9,7 @@ import { notifyNewWaitlistEntry } from "@/lib/notify";
 export type JoinWaitlistInput = {
   product: string;
   size: string;
+  quantity?: number;
   name: string;
   phone: string;
 };
@@ -24,8 +25,17 @@ const MAX = {
   phone: 40,
 };
 
+const QUANTITY_MIN = 1;
+const QUANTITY_MAX = 10;
+
 function trim(value: unknown, max: number): string {
   return String(value ?? "").trim().slice(0, max);
+}
+
+function clampQuantity(value: unknown): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return QUANTITY_MIN;
+  return Math.min(QUANTITY_MAX, Math.max(QUANTITY_MIN, n));
 }
 
 export async function joinWaitlist(
@@ -35,6 +45,7 @@ export async function joinWaitlist(
   const size = trim(input.size, MAX.size);
   const name = trim(input.name, MAX.name);
   const phone = trim(input.phone, MAX.phone);
+  const quantity = clampQuantity(input.quantity);
 
   if (!product || !size) return { ok: false, error: "missing_product" };
   if (!name) return { ok: false, error: "missing_name" };
@@ -43,11 +54,11 @@ export async function joinWaitlist(
   }
 
   await sql`
-    INSERT INTO waitlist (product, size, customer_name, phone)
-    VALUES (${product}, ${size}, ${name}, ${phone})
+    INSERT INTO waitlist (product, size, quantity, customer_name, phone)
+    VALUES (${product}, ${size}, ${quantity}, ${name}, ${phone})
   `;
 
-  after(() => notifyNewWaitlistEntry({ product, size, name, phone }));
+  after(() => notifyNewWaitlistEntry({ product, size, quantity, name, phone }));
 
   revalidatePath("/admin");
   return { ok: true };
@@ -63,6 +74,35 @@ export async function deleteWaitlistEntry(formData: FormData): Promise<void> {
   if (!UUID_RE.test(id)) throw new Error("invalid_id");
 
   await sql`DELETE FROM waitlist WHERE id = ${id}`;
+  revalidatePath("/admin");
+}
+
+const VALID_SIZES = new Set(["S", "M", "L", "XL"]);
+
+export async function updateWaitlistSize(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  const size = String(formData.get("size") ?? "").trim();
+  if (!VALID_SIZES.has(size)) throw new Error("invalid_size");
+
+  await sql`UPDATE waitlist SET size = ${size} WHERE id = ${id}`;
+  revalidatePath("/admin");
+}
+
+export async function updateWaitlistQuantity(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  const quantity = clampQuantity(formData.get("quantity"));
+
+  await sql`UPDATE waitlist SET quantity = ${quantity} WHERE id = ${id}`;
   revalidatePath("/admin");
 }
 

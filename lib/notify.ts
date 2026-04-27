@@ -80,6 +80,7 @@ export async function notifyNewOrder(order: OrderSummary): Promise<void> {
 type WaitlistSummary = {
   product: string;
   size: string;
+  quantity: number;
   name: string;
   phone: string;
 };
@@ -90,7 +91,8 @@ export async function notifyNewWaitlistEntry(
   const url = process.env.SLACK_WEBHOOK_URL;
   if (!url) return;
 
-  const headline = `👀 *רישום לרשימת המתנה*\n*${entry.product}* — מידה ${entry.size}`;
+  const qtyLabel = entry.quantity > 1 ? ` · ×${entry.quantity}` : "";
+  const headline = `👀 *רישום לרשימת המתנה*\n*${entry.product}* — מידה ${entry.size}${qtyLabel}`;
 
   const blocks: unknown[] = [
     {
@@ -111,7 +113,7 @@ export async function notifyNewWaitlistEntry(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: `👀 רישום לרשימת המתנה: ${entry.product} (${entry.name})`,
+        text: `👀 רישום לרשימת המתנה: ${entry.product}${qtyLabel} (${entry.name})`,
         blocks,
       }),
     });

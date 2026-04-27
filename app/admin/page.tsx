@@ -3,6 +3,7 @@ import {
   Clock,
   Hash,
   LogOut,
+  Megaphone,
   NotebookPen,
   Package,
   Phone,
@@ -10,17 +11,19 @@ import {
   StickyNote,
   User,
 } from "lucide-react";
-import { sql, type Order, type WaitlistEntry } from "@/lib/db";
+import { sql, type Order } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
-import { updateWaitlistAdminNote } from "@/app/actions/waitlist";
-import { DeleteWaitlistButton } from "./DeleteWaitlistButton";
+import { updateOrderAdminNote } from "@/app/actions/orders";
+import { imagePathFor } from "@/lib/product-image";
+import { DeleteOrderButton } from "./DeleteOrderButton";
 import { AdminNoteEditor } from "./AdminNoteEditor";
 import { ExportOrdersButton } from "./ExportOrdersButton";
 import { TabNav } from "./TabNav";
 import { OrdersView } from "./OrdersView";
-import { WaitlistSizeEditor } from "./WaitlistSizeEditor";
-import { WaitlistQuantityEditor } from "./WaitlistQuantityEditor";
+import { OrderSizeEditor } from "./OrderSizeEditor";
+import { OrderQuantityEditor } from "./OrderQuantityEditor";
+import { HeardFromEditor } from "./HeardFromEditor";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
@@ -37,27 +40,22 @@ export default async function AdminPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
 
-  const [orders, waitlist] = (await Promise.all([
-    sql`
-      SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, created_at
-      FROM orders
-      ORDER BY created_at DESC
-      LIMIT 500
-    `,
-    sql`
-      SELECT id, product, size, quantity, customer_name, phone, notes, admin_note, status, created_at
-      FROM waitlist
-      ORDER BY created_at DESC
-      LIMIT 500
-    `,
-  ])) as [Order[], WaitlistEntry[]];
+  const rows = (await sql`
+    SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_waitlist, created_at
+    FROM orders
+    ORDER BY created_at DESC
+    LIMIT 500
+  `) as Order[];
+
+  const orders = rows.filter((o) => !o.is_waitlist);
+  const waitlist = rows.filter((o) => o.is_waitlist);
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const startOfWeek = new Date();
   startOfWeek.setDate(startOfWeek.getDate() - 7);
-  const sumQty = (rows: Order[]) =>
-    rows.reduce((acc, o) => acc + (o.quantity ?? 1), 0);
+  const sumQty = (rs: Order[]) =>
+    rs.reduce((acc, o) => acc + (o.quantity ?? 1), 0);
   const totalCount = sumQty(orders);
   const weekCount = sumQty(
     orders.filter((o) => new Date(o.created_at) >= startOfWeek)
@@ -84,7 +82,7 @@ export default async function AdminPage() {
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <ExportOrdersButton orders={orders} />
+            <ExportOrdersButton orders={rows} />
             <form action={logoutAction}>
               <button
                 type="submit"
@@ -113,7 +111,7 @@ export default async function AdminPage() {
             <h2 className="text-sm font-medium tracking-[-0.01em] text-neutral-900">
               רשימת המתנה
             </h2>
-            <span className="text-[11px] text-neutral-500">({waitlist.length})</span>
+            <span className="text-[11px] text-neutral-500">({sumQty(waitlist)})</span>
           </div>
 
           {waitlist.length === 0 ? (
@@ -130,25 +128,37 @@ export default async function AdminPage() {
                     className="rounded border border-neutral-200 bg-white p-4 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <span className="text-[11px] text-neutral-500">
-                          {dateFmt.format(new Date(w.created_at))}
-                        </span>
-                        <p className="mt-1 text-sm font-medium text-neutral-900">
-                          {w.product}
-                        </p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-                          <div className="flex items-center gap-1.5">
-                            <span>מידה</span>
-                            <WaitlistSizeEditor id={w.id} current={w.size} />
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span>כמות</span>
-                            <WaitlistQuantityEditor id={w.id} current={w.quantity} />
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imagePathFor({
+                            product: w.product,
+                            variantType: w.variant_type,
+                            color: w.color,
+                          })}
+                          alt=""
+                          className="h-12 w-12 shrink-0 object-contain"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[11px] text-neutral-500">
+                            {dateFmt.format(new Date(w.created_at))}
+                          </span>
+                          <p className="mt-1 text-sm font-medium text-neutral-900">
+                            {w.product}
+                          </p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+                            <div className="flex items-center gap-1.5">
+                              <span>מידה</span>
+                              <OrderSizeEditor id={w.id} current={w.size} />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span>כמות</span>
+                              <OrderQuantityEditor id={w.id} current={w.quantity} />
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <DeleteWaitlistButton id={w.id} label={w.customer_name} />
+                      <DeleteOrderButton id={w.id} label={w.customer_name} />
                     </div>
                     <div className="mt-3 flex flex-col gap-1.5 border-t border-neutral-100 pt-3 text-sm">
                       <p className="flex items-center gap-2 text-neutral-700">
@@ -163,6 +173,7 @@ export default async function AdminPage() {
                         <Phone className="h-3.5 w-3.5 text-neutral-400" strokeWidth={1.75} />
                         <span>{w.phone}</span>
                       </a>
+                      <HeardFromEditor id={w.id} initial={w.heard_from} />
                       {w.notes && (
                         <p className="flex items-start gap-2 whitespace-pre-wrap text-neutral-700">
                           <StickyNote
@@ -176,7 +187,7 @@ export default async function AdminPage() {
                         <AdminNoteEditor
                           id={w.id}
                           initialNote={w.admin_note}
-                          action={updateWaitlistAdminNote}
+                          action={updateOrderAdminNote}
                         />
                       </div>
                     </div>
@@ -196,6 +207,7 @@ export default async function AdminPage() {
                         <Th icon={Hash}>כמות</Th>
                         <Th icon={User}>לקוח</Th>
                         <Th icon={Phone}>טלפון</Th>
+                        <Th icon={Megaphone}>מקור</Th>
                         <Th icon={StickyNote}>הערות</Th>
                         <Th icon={NotebookPen}>הערה לעצמי</Th>
                         <th className="px-4 py-3 font-medium" />
@@ -210,12 +222,26 @@ export default async function AdminPage() {
                           <td className="whitespace-nowrap px-4 py-3 text-xs text-neutral-500">
                             {dateFmt.format(new Date(w.created_at))}
                           </td>
-                          <td className="px-4 py-3 text-neutral-900">{w.product}</td>
                           <td className="px-4 py-3 text-neutral-900">
-                            <WaitlistSizeEditor id={w.id} current={w.size} />
+                            <div className="flex items-start gap-2">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imagePathFor({
+                                  product: w.product,
+                                  variantType: w.variant_type,
+                                  color: w.color,
+                                })}
+                                alt=""
+                                className="h-10 w-10 shrink-0 object-contain"
+                              />
+                              <span>{w.product}</span>
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-neutral-900">
-                            <WaitlistQuantityEditor id={w.id} current={w.quantity} />
+                            <OrderSizeEditor id={w.id} current={w.size} />
+                          </td>
+                          <td className="px-4 py-3 text-neutral-900">
+                            <OrderQuantityEditor id={w.id} current={w.quantity} />
                           </td>
                           <td className="px-4 py-3 text-neutral-900">{w.customer_name}</td>
                           <td className="px-4 py-3 text-neutral-900" dir="ltr">
@@ -229,6 +255,9 @@ export default async function AdminPage() {
                               />
                               <span>{w.phone}</span>
                             </a>
+                          </td>
+                          <td className="px-4 py-3 text-neutral-900">
+                            <HeardFromEditor id={w.id} initial={w.heard_from} />
                           </td>
                           <td className="max-w-xs whitespace-pre-wrap px-4 py-3 text-neutral-700">
                             {w.notes ? (
@@ -247,11 +276,11 @@ export default async function AdminPage() {
                             <AdminNoteEditor
                               id={w.id}
                               initialNote={w.admin_note}
-                              action={updateWaitlistAdminNote}
+                              action={updateOrderAdminNote}
                             />
                           </td>
                           <td className="px-2 py-3 text-left">
-                            <DeleteWaitlistButton
+                            <DeleteOrderButton
                               id={w.id}
                               label={w.customer_name}
                             />
@@ -309,4 +338,3 @@ function Stat({
     </div>
   );
 }
-

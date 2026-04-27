@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { createOrder, type CreateOrderInput } from "@/app/actions/orders";
 import { imagePathFor } from "@/lib/product-image";
 
+type Mode = "order" | "waitlist";
+
 type Props = {
   open: boolean;
   onClose: () => void;
-  order: Omit<CreateOrderInput, "name" | "phone" | "notes"> | null;
+  order: Omit<CreateOrderInput, "name" | "phone" | "notes" | "isWaitlist"> | null;
+  mode?: Mode;
 };
 
 const errorMessages: Record<string, string> = {
@@ -17,7 +20,8 @@ const errorMessages: Record<string, string> = {
   missing_heard_from: "צריך לציין מאיפה הגעת",
 };
 
-export function OrderFormModal({ open, onClose, order }: Props) {
+export function OrderFormModal({ open, onClose, order, mode = "order" }: Props) {
+  const isWaitlist = mode === "waitlist";
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
@@ -78,6 +82,7 @@ export function OrderFormModal({ open, onClose, order }: Props) {
       phone,
       notes: notes || null,
       heardFrom,
+      isWaitlist,
     });
     setSubmitting(false);
     if (res.ok) {
@@ -113,11 +118,16 @@ export function OrderFormModal({ open, onClose, order }: Props) {
           ×
         </button>
         <h2 className="text-base font-medium uppercase tracking-[-0.01em] text-neutral-900">
-          הזמנה
+          {isWaitlist ? "רשימת המתנה" : "הזמנה"}
         </h2>
         <p className="mt-1 text-xs text-neutral-500">
           {productLabel} · מידה {order.size}
         </p>
+        {isWaitlist && (
+          <p className="mt-3 text-xs leading-relaxed text-neutral-600">
+            החולצה אזלה — נשאיר אותך מעודכן ברגע שמלאי חדש יגיע.
+          </p>
+        )}
 
         {success ? (
           <div className="mt-6 flex flex-col items-center gap-3 text-center">
@@ -128,14 +138,14 @@ export function OrderFormModal({ open, onClose, order }: Props) {
               className="h-44 w-auto object-contain animate-shirt-pop"
             />
             <h3 className="text-base font-bold uppercase tracking-[-0.01em] text-neutral-900">
-              ההזמנה אושרה
+              {isWaitlist ? "נרשמת לרשימת המתנה" : "ההזמנה אושרה"}
             </h3>
             <p className="text-xs text-neutral-600">
               {productLabel} · מידה {order.size}
               {quantity > 1 ? ` · ×${quantity}` : ""}
             </p>
             <p className="text-xs text-neutral-500">
-              ניצור איתך קשר בהקדם
+              {isWaitlist ? "ניצור איתך קשר ברגע שיהיה מלאי" : "ניצור איתך קשר בהקדם"}
             </p>
           </div>
         ) : (
@@ -243,9 +253,15 @@ export function OrderFormModal({ open, onClose, order }: Props) {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-2 flex h-12 w-full cursor-pointer items-center justify-center bg-brand text-[11px] font-bold uppercase text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className={`mt-2 flex h-12 w-full cursor-pointer items-center justify-center text-[11px] font-bold uppercase text-white disabled:cursor-not-allowed disabled:opacity-60 ${
+                isWaitlist ? "bg-neutral-900" : "bg-brand"
+              }`}
             >
-              {submitting ? "שולח…" : "שליחת הזמנה"}
+              {submitting
+                ? "שולח…"
+                : isWaitlist
+                  ? "הוסף לרשימת המתנה"
+                  : "שליחת הזמנה"}
             </button>
           </form>
         )}

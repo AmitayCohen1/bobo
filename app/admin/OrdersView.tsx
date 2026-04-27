@@ -6,6 +6,7 @@ import {
   Copy,
   Hash,
   Inbox,
+  Megaphone,
   NotebookPen,
   Package,
   Phone,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import type { Order } from "@/lib/db";
 import { updateOrderAdminNote } from "@/app/actions/orders";
+import { imagePathFor } from "@/lib/product-image";
 import { DeleteOrderButton } from "./DeleteOrderButton";
 import { AdminNoteEditor } from "./AdminNoteEditor";
 import { OrderSizeEditor } from "./OrderSizeEditor";
@@ -34,6 +36,14 @@ function productLabel(o: Order) {
   return [o.variant_type, o.product, o.color && `(${o.color})`]
     .filter(Boolean)
     .join(" ");
+}
+
+function imageFor(o: { product: string; variant_type: string | null; color: string | null }) {
+  return imagePathFor({
+    product: o.product,
+    variantType: o.variant_type,
+    color: o.color,
+  });
 }
 
 function whatsappLink(phone: string): string {
@@ -133,6 +143,7 @@ export function OrdersView({ orders }: { orders: Order[] }) {
       {
         key: string;
         label: string;
+        image: string;
         count: number;
       }
     >();
@@ -140,7 +151,7 @@ export function OrdersView({ orders }: { orders: Order[] }) {
       const key = productKey(o);
       let g = map.get(key);
       if (!g) {
-        g = { key, label: shortProductLabel(o), count: 0 };
+        g = { key, label: shortProductLabel(o), image: imageFor(o), count: 0 };
         map.set(key, g);
       }
       g.count += 1;
@@ -266,6 +277,12 @@ export function OrdersView({ orders }: { orders: Order[] }) {
                 active={selectedProducts.has(p.key)}
                 onClick={() => toggleProduct(p.key)}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.image}
+                  alt=""
+                  className="h-5 w-5 shrink-0 object-contain"
+                />
                 <span>{p.label}</span>
                 <span
                   className={`text-[9px] tabular-nums ${
@@ -494,6 +511,7 @@ function ChronoView({
                 <Th icon={Hash}>כמות</Th>
                 <Th icon={User}>לקוח</Th>
                 <Th icon={Phone}>טלפון</Th>
+                <Th icon={Megaphone}>מקור</Th>
                 <Th icon={StickyNote}>הערות</Th>
                 <Th icon={NotebookPen}>הערה לעצמי</Th>
                 <th className="px-4 py-3 font-medium" />
@@ -522,9 +540,17 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
         {dateFmt.format(new Date(o.created_at))}
       </td>
       <td className="px-4 py-3 text-neutral-900">
-        <div className="flex flex-col gap-1">
-          <span>{productLabel(o)}</span>
-          <DupeBadge count={dupeCount} />
+        <div className="flex items-start gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageFor(o)}
+            alt=""
+            className="h-10 w-10 shrink-0 object-contain"
+          />
+          <div className="flex flex-col gap-1">
+            <span>{productLabel(o)}</span>
+            <DupeBadge count={dupeCount} />
+          </div>
         </div>
       </td>
       <td className="px-4 py-3 text-neutral-900">
@@ -533,14 +559,12 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
       <td className="px-4 py-3 text-neutral-900">
         <OrderQuantityEditor id={o.id} current={o.quantity} />
       </td>
-      <td className="px-4 py-3 text-neutral-900">
-        <div className="flex flex-col items-start gap-1">
-          <span>{o.customer_name}</span>
-          <HeardFromEditor id={o.id} initial={o.heard_from} />
-        </div>
-      </td>
+      <td className="px-4 py-3 text-neutral-900">{o.customer_name}</td>
       <td className="px-4 py-3 text-neutral-900">
         <PhoneCell phone={o.phone} />
+      </td>
+      <td className="px-4 py-3 text-neutral-900">
+        <HeardFromEditor id={o.id} initial={o.heard_from} />
       </td>
       <td className="max-w-xs whitespace-pre-wrap px-4 py-3 text-neutral-700">
         {o.notes ? (
@@ -579,24 +603,32 @@ function OrderCard({
   return (
     <li className="rounded border border-neutral-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-neutral-500">
-              {dateFmt.format(new Date(o.created_at))}
-            </span>
-            <DupeBadge count={dupeCount} />
-          </div>
-          <p className="mt-2 text-sm font-medium text-neutral-900">
-            {productLabel(o)}
-          </p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-            <div className="flex items-center gap-1.5">
-              <span>מידה</span>
-              <OrderSizeEditor id={o.id} current={o.size} />
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageFor(o)}
+            alt=""
+            className="h-12 w-12 shrink-0 object-contain"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-neutral-500">
+                {dateFmt.format(new Date(o.created_at))}
+              </span>
+              <DupeBadge count={dupeCount} />
             </div>
-            <div className="flex items-center gap-1.5">
-              <span>כמות</span>
-              <OrderQuantityEditor id={o.id} current={o.quantity} />
+            <p className="mt-1 text-sm font-medium text-neutral-900">
+              {productLabel(o)}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+              <div className="flex items-center gap-1.5">
+                <span>מידה</span>
+                <OrderSizeEditor id={o.id} current={o.size} />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span>כמות</span>
+                <OrderQuantityEditor id={o.id} current={o.quantity} />
+              </div>
             </div>
           </div>
         </div>
@@ -684,6 +716,12 @@ function CustomerView({
                     <span className="w-24 shrink-0 text-[11px] text-neutral-500">
                       {dateFmt.format(new Date(o.created_at))}
                     </span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageFor(o)}
+                      alt=""
+                      className="h-10 w-10 shrink-0 object-contain"
+                    />
                     <div className="min-w-0 flex-1 flex flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm text-neutral-900">

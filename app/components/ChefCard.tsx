@@ -3,16 +3,16 @@
 import { useState } from "react";
 import { ZoomImage } from "./ZoomImage";
 import { SizeSelector, type Size } from "./SizeSelector";
-import { WaitlistModal } from "./WaitlistModal";
-import type { JoinWaitlistInput } from "@/app/actions/waitlist";
+import { OrderFormModal } from "./OrderFormModal";
+import type { CreateOrderInput } from "@/app/actions/orders";
 
 const PRODUCT = "חולצת רקמה בעזרת השף";
 
 export function ChefCard() {
   const [size, setSize] = useState<Size>("M");
   const [draft, setDraft] = useState<Omit<
-    JoinWaitlistInput,
-    "name" | "phone"
+    CreateOrderInput,
+    "name" | "phone" | "notes" | "isWaitlist"
   > | null>(null);
 
   return (
@@ -35,9 +35,10 @@ export function ChefCard() {
           אזל המלאי — ניצור קשר כשיגיע
         </p>
       </div>
-      <WaitlistModal
+      <OrderFormModal
         open={draft !== null}
-        entry={draft}
+        order={draft}
+        mode="waitlist"
         onClose={() => setDraft(null)}
       />
     </li>

@@ -120,35 +120,55 @@ export default async function AnalyticsPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
 
-  const [grouped, bySize, daily, bySource, total, weekRow, monthRow] = (await Promise.all([
+  const [
+    grouped,
+    bySize,
+    daily,
+    bySource,
+    total,
+    weekRow,
+    monthRow,
+    waitlistTotal,
+    waitlistGrouped,
+  ] = (await Promise.all([
     sql`
       SELECT product, variant_type, color, size, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
+      WHERE is_waitlist = false
       GROUP BY product, variant_type, color, size
       ORDER BY count DESC
     `,
     sql`
       SELECT size, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
+      WHERE is_waitlist = false
       GROUP BY size
     `,
     sql`
       SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'Asia/Jerusalem'), 'YYYY-MM-DD') AS day, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
-      WHERE created_at >= NOW() - INTERVAL '30 days'
+      WHERE is_waitlist = false AND created_at >= NOW() - INTERVAL '30 days'
       GROUP BY day
       ORDER BY day
     `,
     sql`
       SELECT heard_from, COALESCE(SUM(quantity), 0)::int AS count
       FROM orders
-      WHERE heard_from IS NOT NULL AND heard_from <> ''
+      WHERE is_waitlist = false AND heard_from IS NOT NULL AND heard_from <> ''
       GROUP BY heard_from
       ORDER BY count DESC
     `,
-    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders`,
-    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'`,
-    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = false`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = false AND created_at >= NOW() - INTERVAL '7 days'`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = false AND created_at >= NOW() - INTERVAL '30 days'`,
+    sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = true`,
+    sql`
+      SELECT product, variant_type, color, size, COALESCE(SUM(quantity), 0)::int AS count
+      FROM orders
+      WHERE is_waitlist = true
+      GROUP BY product, variant_type, color, size
+      ORDER BY count DESC
+    `,
   ])) as [
     GroupedItem[],
     SizeCount[],
@@ -157,13 +177,17 @@ export default async function AnalyticsPage() {
     SingleCount[],
     SingleCount[],
     SingleCount[],
+    SingleCount[],
+    GroupedItem[],
   ];
 
   const totalCount = total[0]?.count ?? 0;
   const weekCount = weekRow[0]?.count ?? 0;
   const monthCount = monthRow[0]?.count ?? 0;
+  const waitlistCount = waitlistTotal[0]?.count ?? 0;
 
   const products = rollupByProduct(grouped);
+  const waitlistProducts = rollupByProduct(waitlistGrouped);
   const days = fillDays(daily);
   const dailyMax = Math.max(1, ...days.map((d) => d.count));
 
@@ -211,10 +235,11 @@ export default async function AnalyticsPage() {
 
         <TabNav current="analytics" />
 
-        <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           <Stat label="סה״כ" value={totalCount} />
           <Stat label="7 ימים" value={weekCount} accent="emerald" />
           <Stat label="30 ימים" value={monthCount} />
+          <Stat label="רשימת המתנה" value={waitlistCount} accent="amber" />
         </div>
 
         <Section title="פירוט מוצרים">
@@ -278,6 +303,18 @@ export default async function AnalyticsPage() {
             </div>
           )}
         </Section>
+
+        <Section title="רשימת המתנה לפי מוצר">
+          {waitlistProducts.length === 0 ? (
+            <Empty msg="אין רישומים ברשימת המתנה" />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {waitlistProducts.map((p) => (
+                <ProductCard key={p.key} product={p} />
+              ))}
+            </div>
+          )}
+        </Section>
       </div>
     </div>
   );
@@ -290,10 +327,14 @@ function Stat({
 }: {
   label: string;
   value: number;
-  accent?: "emerald";
+  accent?: "emerald" | "amber";
 }) {
   const valueColor =
-    accent === "emerald" ? "text-emerald-700" : "text-neutral-900";
+    accent === "emerald"
+      ? "text-emerald-700"
+      : accent === "amber"
+        ? "text-amber-700"
+        : "text-neutral-900";
   return (
     <div className="rounded border border-neutral-200 bg-white px-3 py-3 sm:px-4">
       <p className="text-[10px] uppercase tracking-wide text-neutral-500">

@@ -3,6 +3,7 @@ import { LogOut, Package } from "lucide-react";
 import { sql } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
+import { imagePathFor } from "@/lib/product-image";
 import { TabNav } from "../TabNav";
 
 export const metadata = { title: "אנליטיקה · בובו" };
@@ -20,7 +21,25 @@ type DailyCount = { day: string; count: number };
 type SourceCount = { heard_from: string; count: number };
 type SingleCount = { count: number };
 
-function itemLabel(o: {
+const SIZE_ORDER = ["S", "M", "L", "XL"];
+const SIZE_COLORS: Record<string, string> = {
+  S: "#94a3b8",
+  M: "#10b981",
+  L: "#0ea5e9",
+  XL: "#f59e0b",
+};
+const SOURCE_PALETTE = [
+  "#0ea5e9",
+  "#10b981",
+  "#f59e0b",
+  "#a855f7",
+  "#ec4899",
+  "#6366f1",
+  "#84cc16",
+  "#94a3b8",
+];
+
+function productTitle(o: {
   variant_type: string | null;
   product: string;
   color: string | null;
@@ -36,7 +55,7 @@ const dayLabel = new Intl.DateTimeFormat("he-IL", {
   timeZone: "Asia/Jerusalem",
 });
 
-function fillDays(rows: DailyCount[], days = 30): { day: string; count: number; label: string }[] {
+function fillDays(rows: DailyCount[], days = 30) {
   const map = new Map(rows.map((r) => [r.day, r.count]));
   const out: { day: string; count: number; label: string }[] = [];
   const today = new Date();
@@ -50,6 +69,51 @@ function fillDays(rows: DailyCount[], days = 30): { day: string; count: number; 
     out.push({ day: key, count: map.get(key) ?? 0, label: dayLabel.format(d) });
   }
   return out;
+}
+
+type ProductRollup = {
+  key: string;
+  product: string;
+  variant_type: string | null;
+  color: string | null;
+  image: string;
+  total: number;
+  bySize: { size: string; count: number }[];
+};
+
+function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
+  const map = new Map<string, ProductRollup>();
+  for (const r of rows) {
+    const key = `${r.product}|${r.variant_type ?? ""}|${r.color ?? ""}`;
+    let group = map.get(key);
+    if (!group) {
+      group = {
+        key,
+        product: r.product,
+        variant_type: r.variant_type,
+        color: r.color,
+        image: imagePathFor({
+          product: r.product,
+          variantType: r.variant_type,
+          color: r.color,
+        }),
+        total: 0,
+        bySize: [],
+      };
+      map.set(key, group);
+    }
+    group.total += r.count;
+    group.bySize.push({ size: r.size, count: r.count });
+  }
+  const all = Array.from(map.values());
+  for (const g of all) {
+    g.bySize.sort(
+      (a, b) =>
+        SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)
+    );
+  }
+  all.sort((a, b) => b.total - a.total);
+  return all;
 }
 
 export default async function AnalyticsPage() {
@@ -67,7 +131,6 @@ export default async function AnalyticsPage() {
       SELECT size, COUNT(*)::int AS count
       FROM orders
       GROUP BY size
-      ORDER BY count DESC
     `,
     sql`
       SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'Asia/Jerusalem'), 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
@@ -99,11 +162,24 @@ export default async function AnalyticsPage() {
   const totalCount = total[0]?.count ?? 0;
   const weekCount = weekRow[0]?.count ?? 0;
   const monthCount = monthRow[0]?.count ?? 0;
-  const groupedTotal = grouped.reduce((sum, r) => sum + r.count, 0);
-  const sizeTotal = bySize.reduce((sum, r) => sum + r.count, 0);
-  const sourceTotal = bySource.reduce((sum, r) => sum + r.count, 0);
+
+  const products = rollupByProduct(grouped);
   const days = fillDays(daily);
   const dailyMax = Math.max(1, ...days.map((d) => d.count));
+
+  const sortedSizes = [...bySize].sort(
+    (a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)
+  );
+  const sizeSlices = sortedSizes.map((s) => ({
+    label: s.size,
+    value: s.count,
+    color: SIZE_COLORS[s.size] ?? "#737373",
+  }));
+  const sourceSlices = bySource.map((s, i) => ({
+    label: s.heard_from,
+    value: s.count,
+    color: SOURCE_PALETTE[i % SOURCE_PALETTE.length],
+  }));
 
   return (
     <div className="min-h-screen bg-neutral-50 px-4 py-8 md:px-10 md:py-10">
@@ -141,27 +217,54 @@ export default async function AnalyticsPage() {
           <Stat label="30 ימים" value={monthCount} />
         </div>
 
+        <Section title="פירוט מוצרים">
+          {products.length === 0 ? (
+            <Empty />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {products.map((p) => (
+                <ProductCard key={p.key} product={p} />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card title="התפלגות לפי מידה">
+            {sizeSlices.length === 0 ? (
+              <Empty />
+            ) : (
+              <Donut slices={sizeSlices} centerLabel="מידות" />
+            )}
+          </Card>
+          <Card title="מאיפה הגיעו">
+            {sourceSlices.length === 0 ? (
+              <Empty msg="עוד אין נתונים" />
+            ) : (
+              <Donut slices={sourceSlices} centerLabel="מקורות" />
+            )}
+          </Card>
+        </div>
+
         <Section title="הזמנות לפי יום (30 ימים)">
           {totalCount === 0 ? (
             <Empty />
           ) : (
             <div className="rounded border border-neutral-200 bg-white p-4 shadow-sm">
-              <div className="flex h-32 items-end gap-1" dir="ltr">
+              <div className="flex h-40 items-end gap-[2px]" dir="ltr">
                 {days.map((d) => {
                   const h = (d.count / dailyMax) * 100;
                   return (
                     <div
                       key={d.day}
-                      className="group relative flex flex-1 flex-col items-center justify-end"
                       title={`${d.label} · ${d.count}`}
-                    >
-                      <div
-                        className={`w-full rounded-sm ${
-                          d.count > 0 ? "bg-emerald-500" : "bg-neutral-100"
-                        }`}
-                        style={{ height: `${Math.max(h, 2)}%` }}
-                      />
-                    </div>
+                      className={`flex-1 rounded-sm transition-colors ${
+                        d.count > 0
+                          ? "bg-emerald-500 hover:bg-emerald-600"
+                          : "bg-neutral-100"
+                      }`}
+                      style={{ height: `${Math.max(h, 4)}%` }}
+                    />
                   );
                 })}
               </div>
@@ -171,113 +274,6 @@ export default async function AnalyticsPage() {
               >
                 <span>{days[0]?.label}</span>
                 <span>{days[days.length - 1]?.label}</span>
-              </div>
-            </div>
-          )}
-        </Section>
-
-        <Section title="פילוח מוצרים ומידות">
-          {grouped.length === 0 ? (
-            <Empty />
-          ) : (
-            <div className="overflow-hidden rounded border border-neutral-200 bg-white shadow-sm">
-              <table className="w-full text-right text-sm">
-                <thead className="bg-neutral-50 text-[11px] uppercase tracking-wide text-neutral-500">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">מוצר</th>
-                    <th className="px-4 py-3 font-medium">מידה</th>
-                    <th className="px-4 py-3 font-medium">כמות</th>
-                    <th className="px-4 py-3 font-medium">%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {grouped.map((g, i) => {
-                    const pct = groupedTotal > 0 ? (g.count / groupedTotal) * 100 : 0;
-                    return (
-                      <tr
-                        key={`${g.product}|${g.variant_type ?? ""}|${g.color ?? ""}|${g.size}|${i}`}
-                        className="border-t border-neutral-200"
-                      >
-                        <td className="px-4 py-3 text-neutral-900">{itemLabel(g)}</td>
-                        <td className="px-4 py-3 text-neutral-700">{g.size}</td>
-                        <td className="px-4 py-3 font-medium text-neutral-900">
-                          {g.count}
-                        </td>
-                        <td className="px-4 py-3 text-neutral-500">
-                          <div className="flex items-center gap-2" dir="ltr">
-                            <div className="h-1.5 w-24 rounded bg-neutral-100">
-                              <div
-                                className="h-full rounded bg-emerald-500"
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                            <span className="text-[11px]">{pct.toFixed(0)}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Section>
-
-        <Section title="התפלגות לפי מידה">
-          {bySize.length === 0 ? (
-            <Empty />
-          ) : (
-            <div className="rounded border border-neutral-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-3">
-                {bySize.map((s) => {
-                  const pct = sizeTotal > 0 ? (s.count / sizeTotal) * 100 : 0;
-                  return (
-                    <div key={s.size} className="flex items-center gap-3">
-                      <span className="w-10 text-sm font-medium text-neutral-900">
-                        {s.size}
-                      </span>
-                      <div className="h-2.5 flex-1 rounded bg-neutral-100" dir="ltr">
-                        <div
-                          className="h-full rounded bg-neutral-900"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="w-14 text-left text-xs text-neutral-700">
-                        {s.count} · {pct.toFixed(0)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </Section>
-
-        <Section title="מאיפה הגיעו (heard_from)">
-          {bySource.length === 0 ? (
-            <Empty msg="עוד אין נתונים" />
-          ) : (
-            <div className="rounded border border-neutral-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-3">
-                {bySource.map((s) => {
-                  const pct = sourceTotal > 0 ? (s.count / sourceTotal) * 100 : 0;
-                  return (
-                    <div key={s.heard_from} className="flex items-center gap-3">
-                      <span className="w-32 truncate text-sm text-neutral-900">
-                        {s.heard_from}
-                      </span>
-                      <div className="h-2.5 flex-1 rounded bg-neutral-100" dir="ltr">
-                        <div
-                          className="h-full rounded bg-sky-500"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="w-14 text-left text-xs text-neutral-700">
-                        {s.count} · {pct.toFixed(0)}%
-                      </span>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           )}
@@ -327,10 +323,142 @@ function Section({
   );
 }
 
+function Card({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded border border-neutral-200 bg-white p-5 shadow-sm">
+      <h3 className="mb-4 text-sm font-medium tracking-[-0.01em] text-neutral-900">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
 function Empty({ msg = "אין נתונים" }: { msg?: string }) {
   return (
     <div className="rounded border border-dashed border-neutral-300 bg-white px-6 py-10 text-center">
       <p className="text-xs text-neutral-500">{msg}</p>
+    </div>
+  );
+}
+
+function ProductCard({ product }: { product: ProductRollup }) {
+  const max = Math.max(1, ...product.bySize.map((s) => s.count));
+  return (
+    <div className="flex flex-col rounded border border-neutral-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={product.image}
+          alt={product.product}
+          className="h-20 w-20 shrink-0 object-contain"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium leading-tight text-neutral-900">
+            {productTitle(product)}
+          </p>
+          <p className="mt-1 text-[10px] uppercase tracking-wide text-neutral-500">
+            סה״כ
+          </p>
+          <p className="text-2xl font-medium leading-none text-neutral-900">
+            {product.total}
+          </p>
+        </div>
+      </div>
+      <div className="mt-5 flex flex-col gap-2">
+        {product.bySize.map((s) => {
+          const pct = (s.count / max) * 100;
+          const color = SIZE_COLORS[s.size] ?? "#737373";
+          return (
+            <div key={s.size} className="flex items-center gap-3">
+              <span className="w-7 text-xs font-medium text-neutral-700">
+                {s.size}
+              </span>
+              <div
+                className="h-2 flex-1 rounded-full bg-neutral-100"
+                dir="ltr"
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${pct}%`, background: color }}
+                />
+              </div>
+              <span className="w-6 text-left text-xs tabular-nums text-neutral-700">
+                {s.count}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Donut({
+  slices,
+  centerLabel,
+}: {
+  slices: { label: string; value: number; color: string }[];
+  centerLabel?: string;
+}) {
+  const total = slices.reduce((sum, s) => sum + s.value, 0);
+  if (total === 0) return <Empty />;
+
+  let acc = 0;
+  const stops = slices.map((s) => {
+    const start = (acc / total) * 360;
+    acc += s.value;
+    const end = (acc / total) * 360;
+    return `${s.color} ${start}deg ${end}deg`;
+  });
+  const gradient = `conic-gradient(${stops.join(", ")})`;
+
+  return (
+    <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:justify-center sm:gap-8">
+      <div
+        className="relative grid place-items-center"
+        style={{ width: 168, height: 168 }}
+      >
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{ backgroundImage: gradient }}
+        />
+        <div className="relative flex h-[64%] w-[64%] flex-col items-center justify-center rounded-full bg-white">
+          <span className="text-2xl font-medium text-neutral-900">
+            {total}
+          </span>
+          {centerLabel && (
+            <span className="mt-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+              {centerLabel}
+            </span>
+          )}
+        </div>
+      </div>
+      <ul className="flex flex-col gap-2 text-sm sm:min-w-[140px]">
+        {slices.map((s) => {
+          const pct = total > 0 ? (s.value / total) * 100 : 0;
+          return (
+            <li key={s.label} className="flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: s.color }}
+              />
+              <span className="flex-1 truncate text-neutral-800">
+                {s.label}
+              </span>
+              <span className="text-xs tabular-nums text-neutral-500">
+                {s.value} · {pct.toFixed(0)}%
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

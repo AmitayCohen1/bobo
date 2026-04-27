@@ -15,6 +15,7 @@ import { updateOrderAdminNote } from "@/app/actions/orders";
 import { DeleteOrderButton } from "./DeleteOrderButton";
 import { AdminNoteEditor } from "./AdminNoteEditor";
 import { OrderSizeEditor } from "./OrderSizeEditor";
+import { OrderQuantityEditor } from "./OrderQuantityEditor";
 
 const dateFmt = new Intl.DateTimeFormat("he-IL", {
   day: "2-digit",
@@ -443,18 +444,6 @@ function DupeBadge({ count }: { count: number }) {
   );
 }
 
-function QtyBadge({ quantity }: { quantity: number }) {
-  if (quantity <= 1) return null;
-  return (
-    <span
-      title="כמות"
-      className="inline-flex items-center rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-bold text-white tabular-nums"
-    >
-      ×{quantity}
-    </span>
-  );
-}
-
 function ChronoView({
   orders,
   dupeMap,
@@ -480,6 +469,7 @@ function ChronoView({
                 <th className="px-4 py-3 font-medium">תאריך</th>
                 <th className="px-4 py-3 font-medium">מוצר</th>
                 <th className="px-4 py-3 font-medium">מידה</th>
+                <th className="px-4 py-3 font-medium">כמות</th>
                 <th className="px-4 py-3 font-medium">לקוח</th>
                 <th className="px-4 py-3 font-medium">טלפון</th>
                 <th className="px-4 py-3 font-medium">הערות</th>
@@ -511,15 +501,15 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
       </td>
       <td className="px-4 py-3 text-neutral-900">
         <div className="flex flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span>{productLabel(o)}</span>
-            <QtyBadge quantity={o.quantity} />
-          </div>
+          <span>{productLabel(o)}</span>
           <DupeBadge count={dupeCount} />
         </div>
       </td>
       <td className="px-4 py-3 text-neutral-900">
         <OrderSizeEditor id={o.id} current={o.size} />
+      </td>
+      <td className="px-4 py-3 text-neutral-900">
+        <OrderQuantityEditor id={o.id} current={o.quantity} />
       </td>
       <td className="px-4 py-3 text-neutral-900">
         <div className="flex flex-col gap-1">
@@ -579,15 +569,18 @@ function OrderCard({
             </span>
             <DupeBadge count={dupeCount} />
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <p className="text-sm font-medium text-neutral-900">
-              {productLabel(o)}
-            </p>
-            <QtyBadge quantity={o.quantity} />
-          </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-neutral-500">
-            <span>מידה</span>
-            <OrderSizeEditor id={o.id} current={o.size} />
+          <p className="mt-2 text-sm font-medium text-neutral-900">
+            {productLabel(o)}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+            <div className="flex items-center gap-1.5">
+              <span>מידה</span>
+              <OrderSizeEditor id={o.id} current={o.size} />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span>כמות</span>
+              <OrderQuantityEditor id={o.id} current={o.quantity} />
+            </div>
           </div>
         </div>
         <DeleteOrderButton id={o.id} label={o.customer_name} />
@@ -684,12 +677,17 @@ function CustomerView({
                         <span className="text-sm text-neutral-900">
                           {productLabel(o)}
                         </span>
-                        <QtyBadge quantity={o.quantity} />
                         <DupeBadge count={dupeCount} />
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-                        <span>מידה</span>
-                        <OrderSizeEditor id={o.id} current={o.size} />
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+                        <div className="flex items-center gap-1.5">
+                          <span>מידה</span>
+                          <OrderSizeEditor id={o.id} current={o.size} />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span>כמות</span>
+                          <OrderQuantityEditor id={o.id} current={o.quantity} />
+                        </div>
                       </div>
                       {o.heard_from && (
                         <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700">

@@ -107,6 +107,19 @@ export async function updateOrderSize(formData: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
+export async function updateOrderQuantity(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  const quantity = clampQuantity(formData.get("quantity"));
+
+  await sql`UPDATE orders SET quantity = ${quantity} WHERE id = ${id}`;
+  revalidatePath("/admin");
+}
+
 const ADMIN_NOTE_MAX = 2000;
 
 export async function updateOrderAdminNote(formData: FormData): Promise<void> {

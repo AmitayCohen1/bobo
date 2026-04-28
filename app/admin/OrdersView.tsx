@@ -82,6 +82,7 @@ function shortProductLabel(o: {
 const SIZE_ORDER = ["S", "M", "L", "XL"];
 
 type Mode = "chrono" | "by-customer";
+type CountMode = "orders" | "units";
 
 type CustomerGroup = {
   phone: string;
@@ -121,6 +122,7 @@ function groupByCustomer(orders: Order[]): CustomerGroup[] {
 export function OrdersView({ orders }: { orders: Order[] }) {
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<Mode>("chrono");
+  const [countMode, setCountMode] = useState<CountMode>("orders");
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
     () => new Set()
   );
@@ -154,21 +156,22 @@ export function OrdersView({ orders }: { orders: Order[] }) {
         g = { key, label: shortProductLabel(o), image: imageFor(o), count: 0 };
         map.set(key, g);
       }
-      g.count += 1;
+      g.count += countMode === "units" ? o.quantity ?? 1 : 1;
     }
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [orders]);
+  }, [orders, countMode]);
 
   const sizeOptions = useMemo(() => {
     const counts = new Map<string, number>();
     for (const o of orders) {
-      counts.set(o.size, (counts.get(o.size) ?? 0) + 1);
+      const inc = countMode === "units" ? o.quantity ?? 1 : 1;
+      counts.set(o.size, (counts.get(o.size) ?? 0) + inc);
     }
     return SIZE_ORDER.map((s) => ({
       size: s,
       count: counts.get(s) ?? 0,
     }));
-  }, [orders]);
+  }, [orders, countMode]);
 
   const filtered = useMemo(() => {
     let result = orders;
@@ -200,6 +203,15 @@ export function OrdersView({ orders }: { orders: Order[] }) {
     }
     return result;
   }, [orders, query, selectedProducts, selectedSizes]);
+
+  const totalUnits = useMemo(
+    () => orders.reduce((acc, o) => acc + (o.quantity ?? 1), 0),
+    [orders]
+  );
+  const filteredUnits = useMemo(
+    () => filtered.reduce((acc, o) => acc + (o.quantity ?? 1), 0),
+    [filtered]
+  );
 
   function toggleProduct(key: string) {
     setSelectedProducts((prev) => {
@@ -321,10 +333,28 @@ export function OrdersView({ orders }: { orders: Order[] }) {
       </div>
 
       <div className="mt-2 flex items-center gap-3">
+        <div className="inline-flex shrink-0 rounded border border-neutral-200 bg-white p-0.5">
+          <ToggleBtn
+            active={countMode === "orders"}
+            onClick={() => setCountMode("orders")}
+          >
+            הזמנות
+          </ToggleBtn>
+          <ToggleBtn
+            active={countMode === "units"}
+            onClick={() => setCountMode("units")}
+          >
+            יחידות
+          </ToggleBtn>
+        </div>
         <p className="text-[11px] text-neutral-500">
-          {filtered.length === orders.length
-            ? `${orders.length} הזמנות`
-            : `${filtered.length} מתוך ${orders.length}`}
+          {countMode === "units"
+            ? filteredUnits === totalUnits
+              ? `${totalUnits} יחידות`
+              : `${filteredUnits} מתוך ${totalUnits} יחידות`
+            : filtered.length === orders.length
+              ? `${orders.length} הזמנות`
+              : `${filtered.length} מתוך ${orders.length} הזמנות`}
         </p>
         {hasActiveFilters && (
           <button

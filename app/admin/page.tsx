@@ -3,45 +3,58 @@ import { LogOut, Package, ShieldCheck } from "lucide-react";
 import { sql, type Order } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
-import { imagePathFor } from "@/lib/product-image";
 import { ExportOrdersButton } from "./ExportOrdersButton";
+import { AdminAnalyticsPanel } from "./AdminAnalyticsPanel";
 import { TabNav } from "./TabNav";
 import { OrdersView } from "./OrdersView";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
-const SIZE_ORDER = ["S", "M", "L", "XL"];
-const SIZE_META: Record<string, { label: string; color: string }> = {
-  S: { label: "S", color: "bg-slate-400" },
-  M: { label: "M", color: "bg-emerald-500" },
-  L: { label: "L", color: "bg-sky-500" },
-  XL: { label: "XL", color: "bg-amber-500" },
-};
-const COLOR_ACCENT: Record<string, string> = {
-  ירוק: "#2d4c3b",
-  חום: "#5d4037",
-  שחור: "#111827",
-  לבן: "#e5e7eb",
-  אפור: "#6b7280",
-  כחול: "#2563eb",
-  תכלת: "#0ea5e9",
-  ורוד: "#ec4899",
-  אדום: "#ef4444",
-  צהוב: "#eab308",
-};
-const DEFAULT_ACCENT = "#64748b";
 
 export default async function AdminPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
 
-  const rows = (await sql`
-    SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_waitlist, created_at
-    FROM orders
-    ORDER BY created_at DESC
-    LIMIT 500
-  `) as Order[];
-  const productCards = rollupProducts(rows);
+  const [rows, grouped, bySize, bySource, total, weekRow, monthRow, waitlistTotal] =
+    (await Promise.all([
+      sql`
+        SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_waitlist, created_at
+        FROM orders
+        ORDER BY created_at DESC
+        LIMIT 500
+      `,
+      sql`
+        SELECT product, variant_type, color, size, is_waitlist, COALESCE(SUM(quantity), 0)::int AS count
+        FROM orders
+        GROUP BY product, variant_type, color, size, is_waitlist
+        ORDER BY count DESC
+      `,
+      sql`
+        SELECT size, COALESCE(SUM(quantity), 0)::int AS count
+        FROM orders
+        GROUP BY size
+      `,
+      sql`
+        SELECT heard_from, COALESCE(SUM(quantity), 0)::int AS count
+        FROM orders
+        WHERE heard_from IS NOT NULL AND heard_from <> ''
+        GROUP BY heard_from
+        ORDER BY count DESC
+      `,
+      sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders`,
+      sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'`,
+      sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'`,
+      sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = true`,
+    ])) as [
+      Order[],
+      { product: string; variant_type: string | null; color: string | null; size: string; is_waitlist: boolean; count: number }[],
+      { size: string; count: number }[],
+      { heard_from: string; count: number }[],
+      { count: number }[],
+      { count: number }[],
+      { count: number }[],
+      { count: number }[],
+    ];
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.95),rgba(245,247,250,1)_36%,rgba(235,239,244,1)_100%)] px-3 py-3 md:px-6 md:py-4">
@@ -86,149 +99,19 @@ export default async function AdminPage() {
 
         <TabNav current="orders" />
 
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {productCards.map((product) => (
-            <ProductCard key={product.key} product={product} />
-          ))}
-        </section>
-
-        <OrdersView orders={rows} />
+        <div className="mt-2 space-y-4">
+          <AdminAnalyticsPanel
+            grouped={grouped as { product: string; variant_type: string | null; color: string | null; size: string; is_waitlist: boolean; count: number }[]}
+            bySize={bySize as { size: string; count: number }[]}
+            bySource={bySource as { heard_from: string; count: number }[]}
+            totalCount={total[0]?.count ?? 0}
+            weekCount={weekRow[0]?.count ?? 0}
+            monthCount={monthRow[0]?.count ?? 0}
+            waitlistCount={waitlistTotal[0]?.count ?? 0}
+          />
+          <OrdersView orders={rows} />
+        </div>
       </div>
     </main>
-  );
-}
-
-type ProductCardData = {
-  key: string;
-  label: string;
-  image: string;
-  color: string | null;
-  units: number;
-  orders: number;
-  bySize: { size: string; count: number }[];
-  accent: string;
-};
-
-function rollupProducts(rows: Order[]): ProductCardData[] {
-  const map = new Map<string, ProductCardData>();
-  const sizeMap = new Map<string, Map<string, number>>();
-  for (const o of rows) {
-    const key = [o.product, o.variant_type ?? "", o.color ?? ""].join("|");
-    let card = map.get(key);
-    if (!card) {
-      card = {
-        key,
-        label: [o.variant_type, o.product, o.color && `(${o.color})`]
-          .filter(Boolean)
-          .join(" "),
-        image: imagePathFor({
-          product: o.product,
-          variantType: o.variant_type,
-          color: o.color,
-        }),
-        color: o.color,
-        units: 0,
-        orders: 0,
-        bySize: [],
-        accent: DEFAULT_ACCENT,
-      };
-      map.set(key, card);
-      sizeMap.set(key, new Map());
-    }
-    card.units += o.quantity ?? 1;
-    card.orders += 1;
-    const bucket = sizeMap.get(key)!;
-    bucket.set(o.size, (bucket.get(o.size) ?? 0) + (o.quantity ?? 1));
-  }
-  for (const [key, card] of map.entries()) {
-    const counts = sizeMap.get(key) ?? new Map();
-    card.bySize = SIZE_ORDER.map((size) => ({
-      size,
-      count: counts.get(size) ?? 0,
-    })).filter((entry) => entry.count > 0);
-    card.accent = card.color ? COLOR_ACCENT[card.color] ?? DEFAULT_ACCENT : DEFAULT_ACCENT;
-  }
-  return Array.from(map.values()).sort((a, b) => b.units - a.units);
-}
-
-function ProductCard({ product }: { product: ProductCardData }) {
-  const maxSize = Math.max(1, ...product.bySize.map((size) => size.count));
-  return (
-    <div
-      className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
-      style={{ borderColor: `${product.accent}33` }}
-    >
-      <div
-        className="absolute inset-x-0 top-0 h-1"
-        style={{ backgroundColor: product.accent }}
-      />
-      <div className="flex items-center gap-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={product.image}
-          alt=""
-          className="h-12 w-12 shrink-0 object-contain"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-neutral-900">
-            {product.label}
-          </p>
-          {product.color && (
-            <p
-              className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-              style={{
-                backgroundColor: `${product.accent}14`,
-                color: product.accent,
-              }}
-            >
-              צבע {product.color}
-            </p>
-          )}
-          <p className="text-xs text-neutral-500">{product.orders} הזמנות</p>
-        </div>
-        <div className="text-left">
-          <div className="mb-1 flex items-center justify-end gap-1.5">
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: product.accent }}
-            />
-            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-              סה״כ יחידות
-            </p>
-          </div>
-          <p
-            className="text-2xl font-semibold tracking-[-0.03em]"
-            style={{ color: product.accent }}
-          >
-            {product.units}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 space-y-2">
-        {product.bySize.map((size) => {
-          const meta = SIZE_META[size.size] ?? {
-            label: size.size,
-            color: "bg-neutral-400",
-          };
-          const width = `${Math.max(8, (size.count / maxSize) * 100)}%`;
-          return (
-            <div key={size.size} className="grid grid-cols-[32px_1fr_26px] items-center gap-2">
-              <span className="text-[11px] font-medium text-neutral-500">
-                {meta.label}
-              </span>
-              <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
-                <div
-                  className={`h-full rounded-full ${meta.color}`}
-                  style={{ width }}
-                />
-              </div>
-              <span className="text-right text-[11px] font-medium tabular-nums text-neutral-700">
-                {size.count}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
   );
 }

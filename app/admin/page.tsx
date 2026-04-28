@@ -15,7 +15,7 @@ export default async function AdminPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
 
-  const [rows, grouped, bySize, bySource, total, weekRow, monthRow, waitlistTotal] =
+  const [rows, grouped, bySize, bySource, total, ordersTotal] =
     (await Promise.all([
       sql`
         SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_waitlist, created_at
@@ -42,16 +42,12 @@ export default async function AdminPage() {
         ORDER BY count DESC
       `,
       sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders`,
-      sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '7 days'`,
-      sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE created_at >= NOW() - INTERVAL '30 days'`,
-      sql`SELECT COALESCE(SUM(quantity), 0)::int AS count FROM orders WHERE is_waitlist = true`,
+      sql`SELECT COUNT(*)::int AS count FROM orders`,
     ])) as [
       Order[],
       { product: string; variant_type: string | null; color: string | null; size: string; is_waitlist: boolean; count: number }[],
       { size: string; count: number }[],
       { heard_from: string; count: number }[],
-      { count: number }[],
-      { count: number }[],
       { count: number }[],
       { count: number }[],
     ];
@@ -105,9 +101,7 @@ export default async function AdminPage() {
             bySize={bySize as { size: string; count: number }[]}
             bySource={bySource as { heard_from: string; count: number }[]}
             totalCount={total[0]?.count ?? 0}
-            weekCount={weekRow[0]?.count ?? 0}
-            monthCount={monthRow[0]?.count ?? 0}
-            waitlistCount={waitlistTotal[0]?.count ?? 0}
+            ordersCount={ordersTotal[0]?.count ?? 0}
           />
           <OrdersView orders={rows} />
         </div>

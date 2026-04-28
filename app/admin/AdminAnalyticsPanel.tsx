@@ -1,4 +1,5 @@
 import { imagePathFor } from "@/lib/product-image";
+import { ExportProductsButton } from "./ExportProductsButton";
 
 type GroupedItem = {
   product: string;
@@ -13,7 +14,7 @@ type SourceCount = { heard_from: string; count: number };
 
 const SIZE_ORDER = ["S", "M", "L", "XL"];
 
-type ProductRollup = {
+export type ProductRollup = {
   key: string;
   product: string;
   variant_type: string | null;
@@ -59,15 +60,18 @@ export function AdminAnalyticsPanel({
       </div>
 
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-neutral-100 px-3 py-2">
+        <div className="flex items-center justify-between gap-2 border-b border-neutral-100 px-3 py-2">
           <h3 className="text-sm font-semibold tracking-[-0.01em] text-neutral-900">
             פירוט מוצרים
           </h3>
-          {products.length > 0 && (
-            <span className="text-[11px] tabular-nums text-neutral-400">
-              {products.length} מוצרים
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {products.length > 0 && (
+              <span className="text-[11px] tabular-nums text-neutral-400">
+                {products.length} מוצרים
+              </span>
+            )}
+            <ExportProductsButton products={products} />
+          </div>
         </div>
         {products.length === 0 ? (
           <Empty />
@@ -80,13 +84,14 @@ export function AdminAnalyticsPanel({
         )}
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs shadow-sm">
-        <DistRow label="מידות" slices={sizeSlices} />
+      <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+        <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs shadow-sm">
+          <DistRow label="מידות" slices={sizeSlices} />
+        </div>
         {sourceSlices.length > 0 && (
-          <>
-            <div className="my-1.5 border-t border-neutral-100" />
+          <div className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs shadow-sm">
             <DistRow label="מקורות" slices={sourceSlices} />
-          </>
+          </div>
         )}
       </div>
     </section>

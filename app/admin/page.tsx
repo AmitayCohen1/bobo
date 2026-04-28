@@ -17,6 +17,19 @@ const SIZE_META: Record<string, { label: string; color: string }> = {
   L: { label: "L", color: "bg-sky-500" },
   XL: { label: "XL", color: "bg-amber-500" },
 };
+const COLOR_ACCENT: Record<string, string> = {
+  ירוק: "#2d4c3b",
+  חום: "#5d4037",
+  שחור: "#111827",
+  לבן: "#e5e7eb",
+  אפור: "#6b7280",
+  כחול: "#2563eb",
+  תכלת: "#0ea5e9",
+  ורוד: "#ec4899",
+  אדום: "#ef4444",
+  צהוב: "#eab308",
+};
+const DEFAULT_ACCENT = "#64748b";
 
 export default async function AdminPage() {
   const session = await getAdminSession();
@@ -28,7 +41,7 @@ export default async function AdminPage() {
     ORDER BY created_at DESC
     LIMIT 500
   `) as Order[];
-  const productCards = rollupProducts(rows).slice(0, 4);
+  const productCards = rollupProducts(rows);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.95),rgba(245,247,250,1)_36%,rgba(235,239,244,1)_100%)] px-3 py-3 md:px-6 md:py-4">
@@ -50,7 +63,8 @@ export default async function AdminPage() {
                   </span>
                 </div>
                 <p className="max-w-2xl text-xs leading-5 text-neutral-500">
-                  לוח ניהול להזמנות וליחידות.
+                  לוח ניהול להזמנות וליחידות. כל כרטיס מפריד במפורש בין מספר
+                  ההזמנות לבין סך היחידות.
                 </p>
               </div>
             </div>
@@ -88,9 +102,11 @@ type ProductCardData = {
   key: string;
   label: string;
   image: string;
+  color: string | null;
   units: number;
   orders: number;
   bySize: { size: string; count: number }[];
+  accent: string;
 };
 
 function rollupProducts(rows: Order[]): ProductCardData[] {
@@ -110,9 +126,11 @@ function rollupProducts(rows: Order[]): ProductCardData[] {
           variantType: o.variant_type,
           color: o.color,
         }),
+        color: o.color,
         units: 0,
         orders: 0,
         bySize: [],
+        accent: DEFAULT_ACCENT,
       };
       map.set(key, card);
       sizeMap.set(key, new Map());
@@ -128,6 +146,7 @@ function rollupProducts(rows: Order[]): ProductCardData[] {
       size,
       count: counts.get(size) ?? 0,
     })).filter((entry) => entry.count > 0);
+    card.accent = card.color ? COLOR_ACCENT[card.color] ?? DEFAULT_ACCENT : DEFAULT_ACCENT;
   }
   return Array.from(map.values()).sort((a, b) => b.units - a.units);
 }
@@ -135,7 +154,14 @@ function rollupProducts(rows: Order[]): ProductCardData[] {
 function ProductCard({ product }: { product: ProductCardData }) {
   const maxSize = Math.max(1, ...product.bySize.map((size) => size.count));
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+    <div
+      className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
+      style={{ borderColor: `${product.accent}33` }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-1"
+        style={{ backgroundColor: product.accent }}
+      />
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -147,13 +173,33 @@ function ProductCard({ product }: { product: ProductCardData }) {
           <p className="truncate text-sm font-medium text-neutral-900">
             {product.label}
           </p>
+          {product.color && (
+            <p
+              className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+              style={{
+                backgroundColor: `${product.accent}14`,
+                color: product.accent,
+              }}
+            >
+              צבע {product.color}
+            </p>
+          )}
           <p className="text-xs text-neutral-500">{product.orders} הזמנות</p>
         </div>
         <div className="text-left">
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-            יחידות
-          </p>
-          <p className="text-2xl font-semibold tracking-[-0.03em] text-emerald-700">
+          <div className="mb-1 flex items-center justify-end gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: product.accent }}
+            />
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
+              סה״כ יחידות
+            </p>
+          </div>
+          <p
+            className="text-2xl font-semibold tracking-[-0.03em]"
+            style={{ color: product.accent }}
+          >
             {product.units}
           </p>
         </div>

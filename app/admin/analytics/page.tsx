@@ -29,6 +29,19 @@ const SIZE_COLORS: Record<string, string> = {
   L: "#0ea5e9",
   XL: "#f59e0b",
 };
+const COLOR_ACCENT: Record<string, string> = {
+  ירוק: "#2d4c3b",
+  חום: "#5d4037",
+  שחור: "#111827",
+  לבן: "#e5e7eb",
+  אפור: "#6b7280",
+  כחול: "#2563eb",
+  תכלת: "#0ea5e9",
+  ורוד: "#ec4899",
+  אדום: "#ef4444",
+  צהוב: "#eab308",
+};
+const DEFAULT_ACCENT = "#64748b";
 const SOURCE_PALETTE = [
   "#0ea5e9",
   "#10b981",
@@ -81,6 +94,7 @@ type ProductRollup = {
   total: number;
   waitlist: number;
   bySize: { size: string; count: number }[];
+  accent: string;
 };
 
 function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
@@ -103,6 +117,7 @@ function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
         total: 0,
         waitlist: 0,
         bySize: [],
+        accent: DEFAULT_ACCENT,
       };
       map.set(key, group);
       sizeMap.set(key, new Map());
@@ -121,6 +136,7 @@ function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
         (a, b) =>
           SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)
       );
+    g.accent = g.color ? COLOR_ACCENT[g.color] ?? DEFAULT_ACCENT : DEFAULT_ACCENT;
   }
   all.sort((a, b) => b.total - a.total);
   return all;
@@ -233,11 +249,20 @@ export default async function AnalyticsPage() {
 
         <TabNav current="analytics" />
 
+        <p className="mt-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+          כל המדדים כאן מוצגים כיחידות, לא כמספר הזמנות. כשמדובר במספר הזמנות,
+          זה יסומן במפורש.
+        </p>
+
         <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-          <Stat label="סה״כ" value={totalCount} />
-          <Stat label="7 ימים" value={weekCount} accent="emerald" />
-          <Stat label="30 ימים" value={monthCount} />
-          <Stat label="רשימת המתנה" value={waitlistCount} accent="amber" />
+          <Stat label="סה״כ יחידות" value={totalCount} />
+          <Stat label="יחידות ב־7 ימים" value={weekCount} accent="emerald" />
+          <Stat label="יחידות ב־30 ימים" value={monthCount} />
+          <Stat
+            label="יחידות ברשימת המתנה"
+            value={waitlistCount}
+            accent="amber"
+          />
         </div>
 
         <Section title="פירוט מוצרים">
@@ -269,7 +294,7 @@ export default async function AnalyticsPage() {
           </Card>
         </div>
 
-        <Section title="הזמנות לפי יום (30 ימים)">
+        <Section title="יחידות לפי יום (30 ימים)">
           {totalCount === 0 ? (
             <Empty />
           ) : (
@@ -379,7 +404,14 @@ function Empty({ msg = "אין נתונים" }: { msg?: string }) {
 function ProductCard({ product }: { product: ProductRollup }) {
   const max = Math.max(1, ...product.bySize.map((s) => s.count));
   return (
-    <div className="flex flex-col rounded border border-neutral-200 bg-white p-5 shadow-sm">
+    <div
+      className="relative flex flex-col overflow-hidden rounded border border-neutral-200 bg-white p-5 shadow-sm"
+      style={{ borderColor: `${product.accent}33` }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-1"
+        style={{ backgroundColor: product.accent }}
+      />
       <div className="flex items-start gap-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -391,15 +423,35 @@ function ProductCard({ product }: { product: ProductRollup }) {
           <p className="text-sm font-medium leading-tight text-neutral-900">
             {productTitle(product)}
           </p>
-          <p className="mt-1 text-[10px] uppercase tracking-wide text-neutral-500">
-            סה״כ
-          </p>
-          <p className="text-2xl font-medium leading-none text-neutral-900">
+          {product.color && (
+            <p
+              className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+              style={{
+                backgroundColor: `${product.accent}14`,
+                color: product.accent,
+              }}
+            >
+              צבע {product.color}
+            </p>
+          )}
+          <div className="mt-1 flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: product.accent }}
+            />
+            <p className="text-[10px] uppercase tracking-wide text-neutral-500">
+              סה״כ יחידות
+            </p>
+          </div>
+          <p
+            className="text-2xl font-medium leading-none"
+            style={{ color: product.accent }}
+          >
             {product.total}
           </p>
           {product.waitlist > 0 && (
             <p className="mt-1 text-[10px] text-amber-700">
-              מזה {product.waitlist} ברשימת המתנה
+              מזה {product.waitlist} יחידות ברשימת המתנה
             </p>
           )}
         </div>

@@ -12,22 +12,6 @@ type SizeCount = { size: string; count: number };
 type SourceCount = { heard_from: string; count: number };
 
 const SIZE_ORDER = ["S", "M", "L", "XL"];
-const SIZE_COLORS: Record<string, string> = {
-  S: "#94a3b8",
-  M: "#10b981",
-  L: "#0ea5e9",
-  XL: "#f59e0b",
-};
-const SOURCE_PALETTE = [
-  "#0ea5e9",
-  "#10b981",
-  "#f59e0b",
-  "#a855f7",
-  "#ec4899",
-  "#6366f1",
-  "#84cc16",
-  "#94a3b8",
-];
 
 type ProductRollup = {
   key: string;
@@ -62,10 +46,9 @@ export function AdminAnalyticsPanel({
     label: s.size,
     value: s.count,
   }));
-  const sourceSlices = bySource.map((s, i) => ({
+  const sourceSlices = bySource.map((s) => ({
     label: s.heard_from,
     value: s.count,
-    color: SOURCE_PALETTE[i % SOURCE_PALETTE.length],
   }));
 
   return (
@@ -115,7 +98,7 @@ function DistRow({
   slices,
 }: {
   label: string;
-  slices: { label: string; value: number; color?: string }[];
+  slices: { label: string; value: number }[];
 }) {
   const total = slices.reduce((sum, s) => sum + s.value, 0);
   if (total === 0) {
@@ -134,14 +117,8 @@ function DistRow({
         return (
           <span
             key={s.label}
-            className="inline-flex items-center gap-1 rounded-md border border-neutral-200/70 bg-neutral-50 px-1.5 py-0.5"
+            className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-neutral-50 px-1.5 py-0.5"
           >
-            {s.color && (
-              <span
-                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: s.color }}
-              />
-            )}
             <span className="text-neutral-600">{s.label}</span>
             <span className="tabular-nums font-semibold text-neutral-900">
               {s.value}
@@ -234,37 +211,24 @@ function ProductRow({ product }: { product: ProductRollup }) {
             <span className="text-[10px] text-neutral-400">יח׳</span>
           </div>
         </div>
-        <div className="mt-1.5 flex h-1 w-full overflow-hidden rounded-full bg-neutral-100">
-          {product.bySize.map((s) => (
-            <div
-              key={s.size}
-              style={{
-                width: `${(s.count / product.total) * 100}%`,
-                background: SIZE_COLORS[s.size] ?? "#737373",
-              }}
-            />
-          ))}
-        </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px]">
           {product.bySize.map((s) => (
             <span
               key={s.size}
-              className="inline-flex items-center gap-1 rounded-md bg-neutral-50 px-1.5 py-0.5"
+              className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-neutral-50 px-1.5 py-0.5"
             >
-              <span
-                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: SIZE_COLORS[s.size] ?? "#737373" }}
-              />
               <span className="text-neutral-500">{s.size}</span>
-              <span className="font-semibold tabular-nums text-neutral-800">
+              <span className="font-semibold tabular-nums text-neutral-900">
                 {s.count}
               </span>
             </span>
           ))}
           {product.waitlist > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-amber-700">
-              <span className="tabular-nums font-semibold">{product.waitlist}</span>
-              <span>המתנה</span>
+            <span className="inline-flex items-center gap-1 rounded-md border border-neutral-300 bg-white px-1.5 py-0.5">
+              <span className="tabular-nums font-semibold text-neutral-900">
+                {product.waitlist}
+              </span>
+              <span className="text-neutral-500">המתנה</span>
             </span>
           )}
         </div>

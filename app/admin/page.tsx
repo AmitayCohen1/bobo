@@ -5,7 +5,6 @@ import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
 import { ExportOrdersButton } from "./ExportOrdersButton";
 import { AdminAnalyticsPanel } from "./AdminAnalyticsPanel";
-import { TabNav } from "./TabNav";
 import { OrdersView } from "./OrdersView";
 
 export const metadata = { title: "ניהול הזמנות" };
@@ -92,8 +91,6 @@ export default async function AdminPage() {
             </div>
           </div>
         </header>
-
-        <TabNav current="orders" />
 
         <div className="mt-2 space-y-4">
           <AdminAnalyticsPanel

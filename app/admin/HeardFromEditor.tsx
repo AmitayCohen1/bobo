@@ -75,13 +75,13 @@ export function HeardFromEditor({
 
   if (editing) {
     return (
-      <div className="inline-flex flex-col gap-1.5 rounded border border-sky-300 bg-white p-1.5">
+      <div className="inline-flex flex-col gap-1.5 rounded-2xl border border-sky-300 bg-white p-2 shadow-sm">
         <div className="flex gap-1">
           <button
             type="button"
             onClick={pickBobo}
             disabled={pending}
-            className={`cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`cursor-pointer rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               mode === BOBO
                 ? "border-sky-500 bg-sky-500 text-white"
                 : "border-sky-200 bg-white text-sky-700 hover:bg-sky-50"
@@ -93,7 +93,7 @@ export function HeardFromEditor({
             type="button"
             onClick={() => setMode("אחר")}
             disabled={pending}
-            className={`cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`cursor-pointer rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               mode === "אחר"
                 ? "border-sky-500 bg-sky-500 text-white"
                 : "border-sky-200 bg-white text-sky-700 hover:bg-sky-50"
@@ -129,14 +129,14 @@ export function HeardFromEditor({
               disabled={pending}
               maxLength={MAX}
               placeholder="פירוט"
-              className="h-6 w-32 rounded border border-sky-200 bg-white px-1.5 text-[11px] text-neutral-900 outline-none placeholder:text-sky-400 focus:border-sky-400 disabled:opacity-60"
+              className="h-8 w-36 rounded-xl border border-sky-200 bg-white px-2 text-[11px] text-neutral-900 outline-none placeholder:text-sky-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 disabled:opacity-60"
             />
             <button
               type="button"
               onClick={saveOther}
               disabled={pending || !otherText.trim()}
               aria-label="שמור"
-              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-sky-500 text-white transition-colors hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl bg-sky-500 text-white transition-colors hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Check className="h-3 w-3" strokeWidth={2.5} />
             </button>
@@ -147,11 +147,11 @@ export function HeardFromEditor({
   }
 
   if (!initial) {
-    return (
+      return (
       <button
         type="button"
         onClick={open}
-        className="inline-flex w-fit cursor-pointer items-center gap-1 rounded-full border border-dashed border-sky-300 bg-sky-50/50 px-2 py-0.5 text-[10px] text-sky-700 transition-colors hover:bg-sky-50"
+        className="inline-flex w-fit cursor-pointer items-center gap-1 rounded-full border border-dashed border-sky-300 bg-sky-50/50 px-2.5 py-1 text-[10px] font-medium text-sky-700 transition-colors hover:bg-sky-50"
       >
         <Plus className="h-3 w-3" strokeWidth={2} />
         מקור
@@ -164,7 +164,7 @@ export function HeardFromEditor({
       type="button"
       onClick={open}
       title="לחץ לעריכה"
-      className="inline-flex w-fit cursor-pointer items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700 transition-colors hover:bg-sky-100"
+      className="inline-flex w-fit cursor-pointer items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-medium text-sky-700 transition-colors hover:bg-sky-100"
     >
       <Megaphone className="h-3 w-3" strokeWidth={1.75} />
       {initial}

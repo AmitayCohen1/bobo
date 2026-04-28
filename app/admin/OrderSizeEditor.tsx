@@ -37,7 +37,7 @@ export function OrderSizeEditor({
       value={value}
       onChange={onChange}
       disabled={pending}
-      className="cursor-pointer rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-xs text-neutral-900 outline-none transition-colors hover:bg-neutral-50 focus:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-60"
+      className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-900 outline-none transition-colors hover:bg-neutral-50 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
       aria-label="עריכת מידה"
     >
       {SIZES.map((s) => (

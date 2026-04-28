@@ -1,14 +1,22 @@
 import { redirect } from "next/navigation";
-import { LogOut, Package } from "lucide-react";
+import { LogOut, Package, ShieldCheck } from "lucide-react";
 import { sql, type Order } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
+import { imagePathFor } from "@/lib/product-image";
 import { ExportOrdersButton } from "./ExportOrdersButton";
 import { TabNav } from "./TabNav";
 import { OrdersView } from "./OrdersView";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
+const SIZE_ORDER = ["S", "M", "L", "XL"];
+const SIZE_META: Record<string, { label: string; color: string }> = {
+  S: { label: "S", color: "bg-slate-400" },
+  M: { label: "M", color: "bg-emerald-500" },
+  L: { label: "L", color: "bg-sky-500" },
+  XL: { label: "XL", color: "bg-amber-500" },
+};
 
 export default async function AdminPage() {
   const session = await getAdminSession();
@@ -20,85 +28,161 @@ export default async function AdminPage() {
     ORDER BY created_at DESC
     LIMIT 500
   `) as Order[];
-
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const startOfWeek = new Date();
-  startOfWeek.setDate(startOfWeek.getDate() - 7);
-  const sumQty = (rs: Order[]) =>
-    rs.reduce((acc, o) => acc + (o.quantity ?? 1), 0);
-  const totalCount = sumQty(rows);
-  const weekCount = sumQty(
-    rows.filter((o) => new Date(o.created_at) >= startOfWeek)
-  );
-  const todayCount = sumQty(
-    rows.filter((o) => new Date(o.created_at) >= startOfToday)
-  );
+  const productCards = rollupProducts(rows).slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-neutral-50 px-4 py-8 md:px-10 md:py-10">
-      <div className="mx-auto max-w-6xl">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white sm:h-11 sm:w-11">
-              <Package className="h-5 w-5" strokeWidth={1.75} />
-            </span>
-            <div>
-              <h1 className="text-lg font-medium tracking-[-0.01em] text-neutral-900">
-                הזמנות
-              </h1>
-              <p className="text-xs text-neutral-500">
-                בובו · מחובר כ־{session.username}
-              </p>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.95),rgba(245,247,250,1)_36%,rgba(235,239,244,1)_100%)] px-3 py-3 md:px-6 md:py-4">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3">
+        <header className="rounded-3xl border border-white/70 bg-white/85 px-4 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.06)] backdrop-blur md:px-5 md:py-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-neutral-950 text-white shadow-sm">
+                <Package className="h-5 w-5" strokeWidth={1.75} />
+              </span>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-semibold tracking-[-0.03em] text-neutral-950">
+                    הזמנות
+                  </h1>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                    <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.9} />
+                    מחובר כ־{session.username}
+                  </span>
+                </div>
+                <p className="max-w-2xl text-xs leading-5 text-neutral-500">
+                  לוח ניהול להזמנות וליחידות.
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <ExportOrdersButton orders={rows} />
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded border border-neutral-300 bg-white px-3 py-2 text-[11px] uppercase tracking-wide text-neutral-700 transition-colors hover:bg-neutral-100 sm:w-auto"
-              >
-                <LogOut className="h-3.5 w-3.5" strokeWidth={1.75} />
-                התנתקות
-              </button>
-            </form>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+              <ExportOrdersButton orders={rows} />
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50 sm:w-auto"
+                >
+                  <LogOut className="h-4 w-4" strokeWidth={1.75} />
+                  התנתקות
+                </button>
+              </form>
+            </div>
           </div>
         </header>
 
         <TabNav current="orders" />
 
-        <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
-          <Stat label="סה״כ פריטים" value={totalCount} />
-          <Stat label="פריטים השבוע" value={weekCount} accent="emerald" />
-          <Stat label="פריטים היום" value={todayCount} />
-        </div>
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {productCards.map((product) => (
+            <ProductCard key={product.key} product={product} />
+          ))}
+        </section>
 
         <OrdersView orders={rows} />
       </div>
-    </div>
+    </main>
   );
 }
 
-function Stat({
-  label,
-  value,
-  accent,
-}: {
+type ProductCardData = {
+  key: string;
   label: string;
-  value: number;
-  accent?: "emerald";
-}) {
-  const valueColor =
-    accent === "emerald" ? "text-emerald-700" : "text-neutral-900";
+  image: string;
+  units: number;
+  orders: number;
+  bySize: { size: string; count: number }[];
+};
+
+function rollupProducts(rows: Order[]): ProductCardData[] {
+  const map = new Map<string, ProductCardData>();
+  const sizeMap = new Map<string, Map<string, number>>();
+  for (const o of rows) {
+    const key = [o.product, o.variant_type ?? "", o.color ?? ""].join("|");
+    let card = map.get(key);
+    if (!card) {
+      card = {
+        key,
+        label: [o.variant_type, o.product, o.color && `(${o.color})`]
+          .filter(Boolean)
+          .join(" "),
+        image: imagePathFor({
+          product: o.product,
+          variantType: o.variant_type,
+          color: o.color,
+        }),
+        units: 0,
+        orders: 0,
+        bySize: [],
+      };
+      map.set(key, card);
+      sizeMap.set(key, new Map());
+    }
+    card.units += o.quantity ?? 1;
+    card.orders += 1;
+    const bucket = sizeMap.get(key)!;
+    bucket.set(o.size, (bucket.get(o.size) ?? 0) + (o.quantity ?? 1));
+  }
+  for (const [key, card] of map.entries()) {
+    const counts = sizeMap.get(key) ?? new Map();
+    card.bySize = SIZE_ORDER.map((size) => ({
+      size,
+      count: counts.get(size) ?? 0,
+    })).filter((entry) => entry.count > 0);
+  }
+  return Array.from(map.values()).sort((a, b) => b.units - a.units);
+}
+
+function ProductCard({ product }: { product: ProductCardData }) {
+  const maxSize = Math.max(1, ...product.bySize.map((size) => size.count));
   return (
-    <div className="rounded border border-neutral-200 bg-white px-3 py-3 sm:px-4">
-      <p className="text-[10px] uppercase tracking-wide text-neutral-500">
-        {label}
-      </p>
-      <p className={`mt-1 text-xl font-medium sm:text-2xl ${valueColor}`}>
-        {value}
-      </p>
+    <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <div className="flex items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={product.image}
+          alt=""
+          className="h-12 w-12 shrink-0 object-contain"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-neutral-900">
+            {product.label}
+          </p>
+          <p className="text-xs text-neutral-500">{product.orders} הזמנות</p>
+        </div>
+        <div className="text-left">
+          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
+            יחידות
+          </p>
+          <p className="text-2xl font-semibold tracking-[-0.03em] text-emerald-700">
+            {product.units}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        {product.bySize.map((size) => {
+          const meta = SIZE_META[size.size] ?? {
+            label: size.size,
+            color: "bg-neutral-400",
+          };
+          const width = `${Math.max(8, (size.count / maxSize) * 100)}%`;
+          return (
+            <div key={size.size} className="grid grid-cols-[32px_1fr_26px] items-center gap-2">
+              <span className="text-[11px] font-medium text-neutral-500">
+                {meta.label}
+              </span>
+              <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
+                <div
+                  className={`h-full rounded-full ${meta.color}`}
+                  style={{ width }}
+                />
+              </div>
+              <span className="text-right text-[11px] font-medium tabular-nums text-neutral-700">
+                {size.count}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

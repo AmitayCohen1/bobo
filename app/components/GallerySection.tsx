@@ -28,7 +28,6 @@ export function GallerySection() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalIndex]);
 
   function shift(step: number) {

@@ -81,48 +81,8 @@ function shortProductLabel(o: {
 
 const SIZE_ORDER = ["S", "M", "L", "XL"];
 
-type Mode = "chrono" | "by-customer";
-type CountMode = "orders" | "units";
-
-type CustomerGroup = {
-  phone: string;
-  name: string;
-  orders: Order[];
-  latestAt: number;
-};
-
-function groupByCustomer(orders: Order[]): CustomerGroup[] {
-  const map = new Map<string, CustomerGroup>();
-  for (const o of orders) {
-    const phoneKey = o.phone.replace(/\D/g, "");
-    let g = map.get(phoneKey);
-    if (!g) {
-      g = { phone: o.phone, name: o.customer_name, orders: [], latestAt: 0 };
-      map.set(phoneKey, g);
-    }
-    g.orders.push(o);
-    const t = new Date(o.created_at).getTime();
-    if (t > g.latestAt) {
-      g.latestAt = t;
-      g.name = o.customer_name;
-      g.phone = o.phone;
-    }
-  }
-  const list = Array.from(map.values());
-  for (const g of list) {
-    g.orders.sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-  }
-  list.sort((a, b) => b.latestAt - a.latestAt);
-  return list;
-}
-
 export function OrdersView({ orders }: { orders: Order[] }) {
   const [query, setQuery] = useState("");
-  const [mode, setMode] = useState<Mode>("chrono");
-  const [countMode, setCountMode] = useState<CountMode>("orders");
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
     () => new Set()
   );
@@ -142,12 +102,12 @@ export function OrdersView({ orders }: { orders: Order[] }) {
   const productOptions = useMemo(() => {
     const map = new Map<
       string,
-      {
-        key: string;
-        label: string;
-        image: string;
-        count: number;
-      }
+        {
+          key: string;
+          label: string;
+          image: string;
+          count: number;
+        }
     >();
     for (const o of orders) {
       const key = productKey(o);
@@ -156,22 +116,21 @@ export function OrdersView({ orders }: { orders: Order[] }) {
         g = { key, label: shortProductLabel(o), image: imageFor(o), count: 0 };
         map.set(key, g);
       }
-      g.count += countMode === "units" ? o.quantity ?? 1 : 1;
+      g.count += 1;
     }
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [orders, countMode]);
+  }, [orders]);
 
   const sizeOptions = useMemo(() => {
     const counts = new Map<string, number>();
     for (const o of orders) {
-      const inc = countMode === "units" ? o.quantity ?? 1 : 1;
-      counts.set(o.size, (counts.get(o.size) ?? 0) + inc);
+      counts.set(o.size, (counts.get(o.size) ?? 0) + 1);
     }
     return SIZE_ORDER.map((s) => ({
       size: s,
       count: counts.get(s) ?? 0,
     }));
-  }, [orders, countMode]);
+  }, [orders]);
 
   const filtered = useMemo(() => {
     let result = orders;
@@ -244,139 +203,133 @@ export function OrdersView({ orders }: { orders: Order[] }) {
 
   if (orders.length === 0) {
     return (
-      <div className="mt-8 flex flex-col items-center justify-center rounded border border-dashed border-neutral-300 bg-white px-6 py-16 text-center">
+      <div className="mt-6 flex flex-col items-center justify-center rounded-3xl border border-dashed border-neutral-300 bg-white px-6 py-16 text-center shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
         <Inbox className="h-8 w-8 text-neutral-400" strokeWidth={1.5} />
-        <p className="mt-3 text-sm text-neutral-500">אין הזמנות עדיין</p>
+        <p className="mt-3 text-sm font-medium text-neutral-600">
+          אין הזמנות עדיין
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="mt-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search
-            className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400"
-            strokeWidth={1.75}
-          />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="חיפוש לפי שם, טלפון, מוצר, הערה…"
-            className="h-10 w-full rounded border border-neutral-200 bg-white pr-9 pl-3 text-sm text-neutral-900 outline-none focus:border-neutral-400"
-          />
+    <section className="mt-4 rounded-3xl border border-neutral-200 bg-white/90 p-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] backdrop-blur md:p-4">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5 border-b border-neutral-100 pb-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-500">
+              סינון רשימה
+            </p>
+            <h2 className="mt-1 text-base font-semibold tracking-[-0.02em] text-neutral-950">
+              חיפוש, מוצר ומידה
+            </h2>
+            <p className="mt-1 text-xs text-neutral-600">
+              כל מה שמופיע כאן משפיע רק על הטבלה שמתחת.
+            </p>
+          </div>
         </div>
-        <div className="inline-flex shrink-0 rounded border border-neutral-200 bg-white p-0.5">
-          <ToggleBtn active={mode === "chrono"} onClick={() => setMode("chrono")}>
-            כרונולוגי
-          </ToggleBtn>
-          <ToggleBtn
-            active={mode === "by-customer"}
-            onClick={() => setMode("by-customer")}
-          >
-            לפי לקוח
-          </ToggleBtn>
-        </div>
-      </div>
 
-      <div className="mt-3 flex flex-col gap-2">
-        {productOptions.length > 1 && (
-          <ChipRow label="מוצר">
-            {productOptions.map((p) => (
-              <Chip
-                key={p.key}
-                active={selectedProducts.has(p.key)}
-                onClick={() => toggleProduct(p.key)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={p.image}
-                  alt=""
-                  className="h-5 w-5 shrink-0 object-contain"
-                />
-                <span>{p.label}</span>
-                <span
-                  className={`text-[9px] tabular-nums ${
-                    selectedProducts.has(p.key)
-                      ? "text-white/70"
-                      : "text-neutral-400"
-                  }`}
+        <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 p-3">
+          <div className="flex flex-col gap-3">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
+                strokeWidth={1.75}
+              />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="חיפוש לפי שם, טלפון, מוצר, הערה או מקור"
+                className="h-10 w-full rounded-2xl border border-neutral-200 bg-white pr-10 pl-4 text-sm text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs text-neutral-600">
+                {filtered.length === orders.length
+                  ? `${orders.length} הזמנות · ${totalUnits} יחידות`
+                  : `${filtered.length} מתוך ${orders.length} הזמנות · ${filteredUnits} מתוך ${totalUnits} יחידות`}
+              </div>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-xs font-medium text-neutral-600 underline-offset-4 hover:text-neutral-900 hover:underline"
                 >
-                  {p.count}
-                </span>
-              </Chip>
-            ))}
-          </ChipRow>
-        )}
-        <ChipRow label="מידה">
-          {sizeOptions.map((s) => (
-            <Chip
-              key={s.size}
-              active={selectedSizes.has(s.size)}
-              disabled={s.count === 0}
-              onClick={() => toggleSize(s.size)}
-            >
-              <span>{s.size}</span>
-              <span
-                className={`text-[9px] tabular-nums ${
-                  selectedSizes.has(s.size)
-                    ? "text-white/70"
-                    : "text-neutral-400"
-                }`}
-              >
-                {s.count}
-              </span>
-            </Chip>
-          ))}
-        </ChipRow>
-      </div>
+                  נקה את כל הסינון
+                </button>
+              )}
+            </div>
 
-      <div className="mt-2 flex items-center gap-3">
-        <div className="inline-flex shrink-0 rounded border border-neutral-200 bg-white p-0.5">
-          <ToggleBtn
-            active={countMode === "orders"}
-            onClick={() => setCountMode("orders")}
-          >
-            הזמנות
-          </ToggleBtn>
-          <ToggleBtn
-            active={countMode === "units"}
-            onClick={() => setCountMode("units")}
-          >
-            יחידות
-          </ToggleBtn>
+            <div className="flex flex-col gap-2.5">
+              {productOptions.length > 1 && (
+                <ChipRow label="מוצר">
+                  {productOptions.map((p) => (
+                    <Chip
+                      key={p.key}
+                      active={selectedProducts.has(p.key)}
+                      onClick={() => toggleProduct(p.key)}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.image}
+                        alt=""
+                        className="h-5 w-5 shrink-0 object-contain"
+                      />
+                      <span>{p.label}</span>
+                      <span
+                        className={`text-[10px] tabular-nums ${
+                          selectedProducts.has(p.key)
+                            ? "text-white/70"
+                            : "text-neutral-400"
+                        }`}
+                      >
+                        {p.count}
+                      </span>
+                    </Chip>
+                  ))}
+                </ChipRow>
+              )}
+              <ChipRow label="מידה">
+                {sizeOptions.map((s) => (
+                  <Chip
+                    key={s.size}
+                    active={selectedSizes.has(s.size)}
+                    disabled={s.count === 0}
+                    onClick={() => toggleSize(s.size)}
+                  >
+                    <span>{s.size}</span>
+                    <span
+                      className={`text-[10px] tabular-nums ${
+                        selectedSizes.has(s.size)
+                          ? "text-white/70"
+                          : "text-neutral-400"
+                      }`}
+                    >
+                      {s.count}
+                    </span>
+                  </Chip>
+                ))}
+              </ChipRow>
+            </div>
+          </div>
         </div>
-        <p className="text-[11px] text-neutral-500">
-          {countMode === "units"
-            ? filteredUnits === totalUnits
-              ? `${totalUnits} יחידות`
-              : `${filteredUnits} מתוך ${totalUnits} יחידות`
-            : filtered.length === orders.length
-              ? `${orders.length} הזמנות`
-              : `${filtered.length} מתוך ${orders.length} הזמנות`}
-        </p>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="cursor-pointer text-[11px] text-neutral-500 underline-offset-2 hover:text-neutral-900 hover:underline"
-          >
-            נקה סינון
-          </button>
+
+        {filtered.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-12 text-center">
+            <p className="text-sm font-medium text-neutral-600">
+              אין תוצאות לחיפוש
+            </p>
+            <p className="mt-1 text-xs text-neutral-500">
+              נסה להסיר מסנן, לשנות מידה או לחפש מונח אחר.
+            </p>
+          </div>
+        ) : (
+          <ChronoView orders={filtered} dupeMap={dupeMap} />
         )}
       </div>
-
-      {filtered.length === 0 ? (
-        <div className="mt-4 rounded border border-dashed border-neutral-300 bg-white px-6 py-10 text-center">
-          <p className="text-xs text-neutral-500">אין תוצאות לחיפוש</p>
-        </div>
-      ) : mode === "chrono" ? (
-        <ChronoView orders={filtered} dupeMap={dupeMap} />
-      ) : (
-        <CustomerView orders={filtered} dupeMap={dupeMap} />
-      )}
-    </div>
+    </section>
   );
 }
 
@@ -389,7 +342,7 @@ function ChipRow({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="ml-1 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
+      <span className="ml-1 text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-500">
         {label}
       </span>
       {children}
@@ -409,7 +362,7 @@ function Chip({
   children: React.ReactNode;
 }) {
   const base =
-    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors";
+    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors";
   const cls = disabled
     ? `${base} cursor-not-allowed border-neutral-200 bg-white text-neutral-300`
     : active
@@ -421,30 +374,6 @@ function Chip({
       onClick={onClick}
       disabled={disabled}
       className={cls}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ToggleBtn({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`cursor-pointer rounded px-3 py-1.5 text-[11px] transition-colors ${
-        active
-          ? "bg-neutral-900 text-white"
-          : "text-neutral-600 hover:text-neutral-900"
-      }`}
     >
       {children}
     </button>
@@ -542,10 +471,10 @@ function ChronoView({
       </ul>
 
       {/* Desktop table */}
-      <div className="mt-4 hidden overflow-hidden rounded border border-neutral-200 bg-white shadow-sm md:block">
+      <div className="mt-4 hidden overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)] md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-right text-sm">
-            <thead className="bg-neutral-50 text-[11px] uppercase tracking-wide text-neutral-500">
+            <thead className="bg-neutral-50/80 text-[11px] uppercase tracking-[0.14em] text-neutral-500">
               <tr>
                 <Th icon={Clock}>תאריך</Th>
                 <Th icon={Package}>מוצר</Th>
@@ -577,7 +506,7 @@ function ChronoView({
 
 function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) {
   return (
-    <tr className="border-t border-neutral-200 align-top transition-colors hover:bg-neutral-50">
+    <tr className="border-t border-neutral-100 align-top transition-colors hover:bg-neutral-50/70">
       <td className="whitespace-nowrap px-4 py-3 text-xs text-neutral-500">
         {dateFmt.format(new Date(o.created_at))}
       </td>
@@ -591,7 +520,7 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
           />
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span>{productLabel(o)}</span>
+              <span className="font-medium">{productLabel(o)}</span>
               <WaitlistBadge on={o.is_waitlist} />
             </div>
             <DupeBadge count={dupeCount} />
@@ -632,7 +561,7 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
         />
       </td>
       <td className="px-2 py-3 text-left">
-        <DeleteOrderButton id={o.id} label={o.customer_name} />
+        <DeleteOrderButton id={o.id} label={o.customer_name} variant="full" />
       </td>
     </tr>
   );
@@ -678,7 +607,7 @@ function OrderCard({
             </div>
           </div>
         </div>
-        <DeleteOrderButton id={o.id} label={o.customer_name} />
+        <DeleteOrderButton id={o.id} label={o.customer_name} variant="full" />
       </div>
       <div className="mt-3 flex flex-col gap-1.5 border-t border-neutral-100 pt-3 text-sm">
         <p className="flex items-center gap-2 text-neutral-700">
@@ -705,111 +634,5 @@ function OrderCard({
         </div>
       </div>
     </li>
-  );
-}
-
-function CustomerView({
-  orders,
-  dupeMap,
-}: {
-  orders: Order[];
-  dupeMap: Map<string, number>;
-}) {
-  const groups = useMemo(() => groupByCustomer(orders), [orders]);
-
-  return (
-    <div className="mt-4 flex flex-col gap-4">
-      {groups.map((g) => {
-        const phoneKey = g.phone.replace(/\D/g, "");
-        return (
-          <section
-            key={phoneKey}
-            className="overflow-hidden rounded border border-neutral-200 bg-white shadow-sm"
-          >
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-medium text-white">
-                  {g.orders.length}
-                </span>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-neutral-900">
-                    {g.name}
-                  </span>
-                  <span className="text-[11px] text-neutral-500" dir="ltr">
-                    {g.phone}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={`tel:${g.phone}`}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
-                  title="חיוג"
-                >
-                  <Phone className="h-3.5 w-3.5" strokeWidth={1.75} />
-                </a>
-                <WaButton phone={g.phone} />
-              </div>
-            </header>
-            <ul className="divide-y divide-neutral-100">
-              {g.orders.map((o) => {
-                const dupeCount = dupeMap.get(dupeKey(o)) ?? 1;
-                return (
-                  <li
-                    key={o.id}
-                    className="flex flex-wrap items-start gap-3 px-4 py-3"
-                  >
-                    <span className="w-24 shrink-0 text-[11px] text-neutral-500">
-                      {dateFmt.format(new Date(o.created_at))}
-                    </span>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imageFor(o)}
-                      alt=""
-                      className="h-10 w-10 shrink-0 object-contain"
-                    />
-                    <div className="min-w-0 flex-1 flex flex-col gap-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm text-neutral-900">
-                          {productLabel(o)}
-                        </span>
-                        <WaitlistBadge on={o.is_waitlist} />
-                        <DupeBadge count={dupeCount} />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-                        <div className="flex items-center gap-1.5">
-                          <span>מידה</span>
-                          <OrderSizeEditor id={o.id} current={o.size} />
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span>כמות</span>
-                          <OrderQuantityEditor id={o.id} current={o.quantity} />
-                        </div>
-                      </div>
-                      <HeardFromEditor id={o.id} initial={o.heard_from} />
-                      {o.notes && (
-                        <p className="flex items-start gap-1.5 whitespace-pre-wrap text-xs text-neutral-700">
-                          <StickyNote
-                            className="mt-0.5 h-3 w-3 shrink-0 text-neutral-400"
-                            strokeWidth={1.75}
-                          />
-                          <span>{o.notes}</span>
-                        </p>
-                      )}
-                      <AdminNoteEditor
-                        id={o.id}
-                        initialNote={o.admin_note}
-                        action={updateOrderAdminNote}
-                      />
-                    </div>
-                    <DeleteOrderButton id={o.id} label={o.customer_name} />
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
-    </div>
   );
 }

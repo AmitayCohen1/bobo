@@ -443,13 +443,17 @@ function Donut({
   const total = slices.reduce((sum, s) => sum + s.value, 0);
   if (total === 0) return <Empty />;
 
-  let acc = 0;
-  const stops = slices.map((s) => {
-    const start = (acc / total) * 360;
-    acc += s.value;
-    const end = (acc / total) * 360;
-    return `${s.color} ${start}deg ${end}deg`;
-  });
+  const stops = slices.reduce<{ stops: string[]; acc: number }>(
+    (state, s) => {
+      const start = (state.acc / total) * 360;
+      const nextAcc = state.acc + s.value;
+      const end = (nextAcc / total) * 360;
+      state.stops.push(`${s.color} ${start}deg ${end}deg`);
+      state.acc = nextAcc;
+      return state;
+    },
+    { stops: [], acc: 0 }
+  ).stops;
   const gradient = `conic-gradient(${stops.join(", ")})`;
 
   return (

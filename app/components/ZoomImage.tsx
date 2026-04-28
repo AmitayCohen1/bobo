@@ -14,7 +14,8 @@ export function ZoomImage({ src, imgClassName, containerClassName }: Props) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const id = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(id);
   }, []);
 
   useEffect(() => {

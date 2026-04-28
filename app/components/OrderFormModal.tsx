@@ -35,10 +35,13 @@ export function OrderFormModal({ open, onClose, order, mode = "order" }: Props) 
 
   useEffect(() => {
     if (open) {
-      setError(null);
-      setSuccess(false);
-      setQuantity(1);
-      setTimeout(() => nameRef.current?.focus(), 50);
+      const id = window.setTimeout(() => {
+        setError(null);
+        setSuccess(false);
+        setQuantity(1);
+        nameRef.current?.focus();
+      }, 0);
+      return () => window.clearTimeout(id);
     }
   }, [open]);
 

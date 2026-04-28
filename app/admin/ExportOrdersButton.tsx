@@ -86,10 +86,10 @@ export function ExportOrdersButton({ orders }: { orders: Order[] }) {
       type="button"
       onClick={onClick}
       disabled={orders.length === 0}
-      className="flex w-full cursor-pointer items-center justify-center gap-2 rounded border border-neutral-300 bg-white px-3 py-2 text-[11px] uppercase tracking-wide text-neutral-700 transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-950 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500 sm:w-auto"
     >
       <Download className="h-3.5 w-3.5" strokeWidth={1.75} />
-      ייצוא ל-Excel
+      ייצוא CSV
     </button>
   );
 }

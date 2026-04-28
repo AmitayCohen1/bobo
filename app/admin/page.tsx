@@ -69,9 +69,9 @@ export default async function AdminPage() {
         <TabNav current="orders" />
 
         <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
-          <Stat label="סה״כ" value={totalCount} />
-          <Stat label="השבוע" value={weekCount} accent="emerald" />
-          <Stat label="היום" value={todayCount} />
+          <Stat label="סה״כ פריטים" value={totalCount} />
+          <Stat label="פריטים השבוע" value={weekCount} accent="emerald" />
+          <Stat label="פריטים היום" value={todayCount} />
         </div>
 
         <OrdersView orders={rows} />

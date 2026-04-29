@@ -34,6 +34,18 @@ const dateFmt = new Intl.DateTimeFormat("he-IL", {
   timeZone: "Asia/Jerusalem",
 });
 
+const dayFmt = new Intl.DateTimeFormat("he-IL", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Jerusalem",
+});
+
+const timeFmt = new Intl.DateTimeFormat("he-IL", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Jerusalem",
+});
+
 function productLabel(o: Order) {
   return [o.variant_type, o.product, o.color && `(${o.color})`]
     .filter(Boolean)
@@ -510,8 +522,13 @@ function ChronoView({
 function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) {
   return (
     <tr className="border-t border-neutral-100 align-top transition-colors hover:bg-neutral-50/70">
-      <td className="whitespace-nowrap px-4 py-3 text-xs text-neutral-500">
-        {dateFmt.format(new Date(o.created_at))}
+      <td className="whitespace-nowrap px-2 py-3 text-[11px] leading-tight text-neutral-500">
+        <div className="flex flex-col tabular-nums">
+          <span>{dayFmt.format(new Date(o.created_at))}</span>
+          <span className="text-neutral-400">
+            {timeFmt.format(new Date(o.created_at))}
+          </span>
+        </div>
       </td>
       <td className="px-4 py-3 text-neutral-900">
         <div className="flex items-start gap-2">
@@ -567,7 +584,7 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
         />
       </td>
       <td className="px-2 py-3 text-left">
-        <DeleteOrderButton id={o.id} label={o.customer_name} variant="full" />
+        <DeleteOrderButton id={o.id} label={o.customer_name} />
       </td>
     </tr>
   );

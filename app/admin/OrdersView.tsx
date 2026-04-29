@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  BadgeCheck,
   Clock,
   Copy,
   Hash,
@@ -23,6 +24,7 @@ import { AdminNoteEditor } from "./AdminNoteEditor";
 import { OrderSizeEditor } from "./OrderSizeEditor";
 import { OrderQuantityEditor } from "./OrderQuantityEditor";
 import { HeardFromEditor } from "./HeardFromEditor";
+import { PaidToggle } from "./PaidToggle";
 
 const dateFmt = new Intl.DateTimeFormat("he-IL", {
   day: "2-digit",
@@ -483,6 +485,7 @@ function ChronoView({
                 <Th icon={User}>לקוח</Th>
                 <Th icon={Phone}>טלפון</Th>
                 <Th icon={Megaphone}>מקור</Th>
+                <Th icon={BadgeCheck}>תשלום</Th>
                 <Th icon={StickyNote}>הערות</Th>
                 <Th icon={NotebookPen}>הערה לעצמי</Th>
                 <th className="px-4 py-3 font-medium" />
@@ -539,6 +542,9 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
       </td>
       <td className="px-4 py-3 text-neutral-900">
         <HeardFromEditor id={o.id} initial={o.heard_from} />
+      </td>
+      <td className="px-4 py-3 text-neutral-900">
+        <PaidToggle id={o.id} initial={o.is_paid} />
       </td>
       <td className="max-w-xs whitespace-pre-wrap px-4 py-3 text-neutral-700">
         {o.notes ? (
@@ -616,6 +622,7 @@ function OrderCard({
         </p>
         <PhoneCell phone={o.phone} />
         <HeardFromEditor id={o.id} initial={o.heard_from} />
+        <PaidToggle id={o.id} initial={o.is_paid} />
         {o.notes && (
           <p className="flex items-start gap-2 whitespace-pre-wrap text-neutral-700">
             <StickyNote

@@ -27,5 +27,6 @@ export type Order = {
   heard_from: string | null;
   status: string;
   is_waitlist: boolean;
+  is_paid: boolean;
   created_at: string;
 };

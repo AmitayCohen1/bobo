@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import { imagePathFor } from "@/lib/product-image";
 import { ExportProductsButton } from "./ExportProductsButton";
 
@@ -8,11 +11,14 @@ type GroupedItem = {
   size: string;
   is_waitlist: boolean;
   count: number;
+  orders: number;
 };
 type SizeCount = { size: string; count: number };
 type SourceCount = { heard_from: string; count: number };
 
 const SIZE_ORDER = ["S", "M", "L", "XL"];
+
+const DEFAULT_EXCLUDED_PRODUCTS = new Set(["חולצת רקמה בעזרת השף"]);
 
 export type ProductRollup = {
   key: string;
@@ -21,6 +27,7 @@ export type ProductRollup = {
   color: string | null;
   image: string;
   total: number;
+  orders: number;
   waitlist: number;
   bySize: { size: string; count: number }[];
 };
@@ -29,16 +36,52 @@ export function AdminAnalyticsPanel({
   grouped,
   bySize,
   bySource,
-  totalCount,
-  ordersCount,
 }: {
   grouped: GroupedItem[];
   bySize: SizeCount[];
   bySource: SourceCount[];
-  totalCount: number;
-  ordersCount: number;
 }) {
-  const products = rollupByProduct(grouped);
+  const products = useMemo(() => rollupByProduct(grouped), [grouped]);
+  const allKeys = useMemo(() => products.map((p) => p.key), [products]);
+  const defaultKeys = useMemo(
+    () =>
+      products
+        .filter((p) => !DEFAULT_EXCLUDED_PRODUCTS.has(p.product))
+        .map((p) => p.key),
+    [products]
+  );
+
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(defaultKeys)
+  );
+
+  const allSelected = selected.size === products.length;
+  const noneSelected = selected.size === 0;
+
+  const filteredUnits = useMemo(
+    () =>
+      products.reduce(
+        (sum, p) => sum + (selected.has(p.key) ? p.total : 0),
+        0
+      ),
+    [products, selected]
+  );
+  const filteredOrders = useMemo(
+    () =>
+      products.reduce(
+        (sum, p) => sum + (selected.has(p.key) ? p.orders : 0),
+        0
+      ),
+    [products, selected]
+  );
+  const totalUnits = useMemo(
+    () => products.reduce((sum, p) => sum + p.total, 0),
+    [products]
+  );
+  const totalOrders = useMemo(
+    () => products.reduce((sum, p) => sum + p.orders, 0),
+    [products]
+  );
 
   const sortedSizes = [...bySize].sort(
     (a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)
@@ -52,24 +95,52 @@ export function AdminAnalyticsPanel({
     value: s.count,
   }));
 
+  function toggle(key: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelected(new Set(allKeys));
+  }
+
+  function selectNone() {
+    setSelected(new Set());
+  }
+
   return (
     <section className="space-y-2">
-      <div className="grid grid-cols-2 gap-1.5">
-        <Stat label="סה״כ יחידות" value={totalCount} />
-        <Stat label="סה״כ הזמנות" value={ordersCount} />
-      </div>
-
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between gap-2 border-b border-neutral-100 px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 px-3 py-2">
           <h3 className="text-sm font-semibold tracking-[-0.01em] text-neutral-900">
             פירוט מוצרים
           </h3>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {products.length > 0 && (
               <span className="text-[11px] tabular-nums text-neutral-400">
-                {products.length} מוצרים
+                {selected.size}/{products.length} נבחרו
               </span>
             )}
+            <button
+              type="button"
+              onClick={selectAll}
+              disabled={allSelected}
+              className="cursor-pointer text-[11px] font-medium text-neutral-600 underline-offset-4 hover:text-neutral-900 hover:underline disabled:cursor-not-allowed disabled:text-neutral-300 disabled:no-underline"
+            >
+              בחר הכל
+            </button>
+            <button
+              type="button"
+              onClick={selectNone}
+              disabled={noneSelected}
+              className="cursor-pointer text-[11px] font-medium text-neutral-600 underline-offset-4 hover:text-neutral-900 hover:underline disabled:cursor-not-allowed disabled:text-neutral-300 disabled:no-underline"
+            >
+              נקה
+            </button>
             <ExportProductsButton products={products} />
           </div>
         </div>
@@ -78,10 +149,30 @@ export function AdminAnalyticsPanel({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x md:divide-x-reverse md:divide-neutral-100">
             {products.map((product) => (
-              <ProductRow key={product.key} product={product} />
+              <ProductRow
+                key={product.key}
+                product={product}
+                checked={selected.has(product.key)}
+                onToggle={() => toggle(product.key)}
+              />
             ))}
           </div>
         )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-1.5">
+        <Stat
+          label="סה״כ יחידות"
+          value={filteredUnits}
+          total={totalUnits}
+          partial={!allSelected}
+        />
+        <Stat
+          label="סה״כ הזמנות"
+          value={filteredOrders}
+          total={totalOrders}
+          partial={!allSelected}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
@@ -156,6 +247,7 @@ function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
           color: r.color,
         }),
         total: 0,
+        orders: 0,
         waitlist: 0,
         bySize: [],
       };
@@ -163,6 +255,7 @@ function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
       sizeMap.set(key, new Map());
     }
     group.total += r.count;
+    group.orders += r.orders;
     if (r.is_waitlist) group.waitlist += r.count;
     const sizeBucket = sizeMap.get(key)!;
     sizeBucket.set(r.size, (sizeBucket.get(r.size) ?? 0) + r.count);
@@ -178,12 +271,29 @@ function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
   return all;
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({
+  label,
+  value,
+  total,
+  partial,
+}: {
+  label: string;
+  value: number;
+  total: number;
+  partial: boolean;
+}) {
   return (
     <div className="flex items-baseline justify-between gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-sm">
       <span className="truncate text-xs text-neutral-500">{label}</span>
-      <span className="text-xl font-semibold leading-none tabular-nums text-neutral-900">
-        {value}
+      <span className="flex items-baseline gap-1">
+        <span className="text-xl font-semibold leading-none tabular-nums text-neutral-900">
+          {value}
+        </span>
+        {partial && (
+          <span className="text-[11px] tabular-nums text-neutral-400">
+            / {total}
+          </span>
+        )}
       </span>
     </div>
   );
@@ -195,9 +305,27 @@ function Empty({ msg = "אין נתונים" }: { msg?: string }) {
   );
 }
 
-function ProductRow({ product }: { product: ProductRollup }) {
+function ProductRow({
+  product,
+  checked,
+  onToggle,
+}: {
+  product: ProductRollup;
+  checked: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <div className="flex items-center gap-3 border-b border-neutral-100 px-3 py-2.5 last:border-b-0 md:[&:nth-last-child(-n+2)]:border-b-0">
+    <label
+      className={`flex cursor-pointer items-center gap-3 border-b border-neutral-100 px-3 py-2.5 transition-colors last:border-b-0 hover:bg-neutral-50/70 md:[&:nth-last-child(-n+2)]:border-b-0 ${
+        checked ? "" : "opacity-50"
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        className="h-4 w-4 shrink-0 cursor-pointer accent-neutral-900"
+      />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={product.image}
@@ -238,7 +366,7 @@ function ProductRow({ product }: { product: ProductRollup }) {
           )}
         </div>
       </div>
-    </div>
+    </label>
   );
 }
 

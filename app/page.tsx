@@ -33,7 +33,8 @@ export default function Home() {
         </ul>
 
         <div className="mt-[60px] flex flex-col items-center gap-3 text-center text-xs leading-relaxed text-neutral-500">
-          <p>החולצות נמכרות במחיר חברי לכיסוי עלויות הייצור והחומרים</p>
+          <p>מדובר בפרויקט אישי חד פעמי, לכן אין החלפות/החזרות, סליחה ♡</p>
+          <p>חולצות ימכרו במחירי עלות שיקבעו לפי מי</p>
           <a
             href="https://www.instagram.com/meitar.bar/"
             target="_blank"

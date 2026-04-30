@@ -42,9 +42,12 @@ export function SeferCard() {
             </label>
           ))}
         </div>
-        <h2 className="mb-2 text-[0.85rem] font-medium uppercase tracking-[-0.01em] text-neutral-900">
+        <h2 className="mb-1 text-[0.85rem] font-medium uppercase tracking-[-0.01em] text-neutral-900">
           דגם &quot;מפוני קריית ספר&quot;
         </h2>
+        <p className="mb-2 text-[11px] text-neutral-500">
+          {type === "חולצה" ? "₪80" : "₪100"}
+        </p>
         <SizeSelector name="size-1" value={size} onChange={setSize} />
         <button
           type="button"

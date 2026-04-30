@@ -32,8 +32,31 @@ export default function Home() {
           <ChefCard />
         </ul>
 
-        <div className="mt-[60px] text-center text-xs leading-relaxed text-neutral-500">
-          <p>* החולצות ימכרו במחירי עלות שיקבעו לפי מידת הביקוש</p>
+        <div className="mt-[60px] flex flex-col items-center gap-3 text-center text-xs leading-relaxed text-neutral-500">
+          <p>החולצות נמכרות במחיר חברי לכיסוי עלויות הייצור והחומרים</p>
+          <a
+            href="https://www.instagram.com/meitar.bar/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-neutral-700 transition-colors hover:text-neutral-900"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+            </svg>
+            <span>צור קשר</span>
+          </a>
         </div>
       </main>
 

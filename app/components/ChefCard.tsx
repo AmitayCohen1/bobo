@@ -1,6 +1,7 @@
 "use client";
 
 import { ZoomImage } from "./ZoomImage";
+import { SizeSelector } from "./SizeSelector";
 
 export function ChefCard() {
   return (
@@ -8,9 +9,13 @@ export function ChefCard() {
       <ZoomImage src="/assets/bless_the_chef_shirt.png" />
       <div className="flex w-full max-w-[280px] flex-col items-center">
         <div className="h-[52px]" />
-        <h2 className="mb-2 text-[0.85rem] font-medium uppercase tracking-[-0.01em] text-neutral-900">
+        <h2 className="mb-1 text-[0.85rem] font-medium uppercase tracking-[-0.01em] text-neutral-900">
           חולצת רקמה &quot;בעזרת השף&quot;
         </h2>
+        <p className="mb-2 text-[11px] text-neutral-500">לא ניתן להזמין כרגע</p>
+        <div aria-hidden="true" className="invisible w-full">
+          <SizeSelector name="chef-size" value="M" onChange={() => {}} />
+        </div>
         <button
           type="button"
           disabled
@@ -19,9 +24,6 @@ export function ChefCard() {
         >
           אזל המלאי
         </button>
-        <p className="mt-2 text-[10px] uppercase tracking-wide text-neutral-500">
-          לא ניתן להזמין כרגע
-        </p>
       </div>
     </li>
   );

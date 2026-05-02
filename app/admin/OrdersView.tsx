@@ -93,7 +93,7 @@ function shortProductLabel(o: {
   return [o.variant_type, stripped, o.color].filter(Boolean).join(" · ");
 }
 
-const SIZE_ORDER = ["S", "M", "L", "XL"];
+const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
 
 export function OrdersView({ orders }: { orders: Order[] }) {
   const [query, setQuery] = useState("");

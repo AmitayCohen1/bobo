@@ -98,7 +98,7 @@ export async function deleteOrder(formData: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
-const VALID_SIZES = new Set(["S", "M", "L", "XL"]);
+const VALID_SIZES = new Set(["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"]);
 
 export async function updateOrderSize(formData: FormData): Promise<void> {
   const session = await getAdminSession();

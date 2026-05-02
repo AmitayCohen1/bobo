@@ -16,7 +16,7 @@ type GroupedItem = {
 type SizeCount = { size: string; count: number };
 type SourceCount = { heard_from: string; count: number };
 
-const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+const SIZE_ORDER = ["12", "14", "16", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
 
 const DEFAULT_EXCLUDED_PRODUCTS = new Set(["חולצת רקמה בעזרת השף"]);
 

@@ -3,7 +3,7 @@
 import { Download } from "lucide-react";
 import type { ProductRollup } from "./AdminAnalyticsPanel";
 
-const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+const SIZE_ORDER = ["12", "14", "16", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
 
 function escapeCsv(value: string | number | null | undefined): string {
   if (value == null) return "";

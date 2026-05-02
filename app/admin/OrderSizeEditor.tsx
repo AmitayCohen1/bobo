@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateOrderSize } from "@/app/actions/orders";
 
-const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"] as const;
+const SIZES = ["12", "14", "16", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"] as const;
 
 export function OrderSizeEditor({
   id,

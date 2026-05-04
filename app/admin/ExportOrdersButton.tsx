@@ -38,6 +38,8 @@ function buildCsv(orders: Order[]): string {
     "מאיפה הגעת",
     "סטטוס",
     "שולם",
+    "ארוז",
+    "נאסף",
   ];
   const rows = orders.map((o) =>
     [
@@ -53,6 +55,8 @@ function buildCsv(orders: Order[]): string {
       o.heard_from,
       o.status,
       o.is_paid ? "כן" : "לא",
+      o.is_packed ? "כן" : "לא",
+      o.is_collected ? "כן" : "לא",
     ]
       .map(escapeCsv)
       .join(",")

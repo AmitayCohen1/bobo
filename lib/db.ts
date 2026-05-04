@@ -28,5 +28,7 @@ export type Order = {
   status: string;
   is_waitlist: boolean;
   is_paid: boolean;
+  is_packed: boolean;
+  is_collected: boolean;
   created_at: string;
 };

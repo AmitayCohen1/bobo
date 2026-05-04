@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import {
   BadgeCheck,
+  Box,
+  CheckCircle2,
   Clock,
   Copy,
   Hash,
@@ -25,6 +27,26 @@ import { OrderSizeEditor } from "./OrderSizeEditor";
 import { OrderQuantityEditor } from "./OrderQuantityEditor";
 import { HeardFromEditor } from "./HeardFromEditor";
 import { PaidToggle } from "./PaidToggle";
+import { PackedToggle } from "./PackedToggle";
+import { CollectedToggle } from "./CollectedToggle";
+
+type TriState = "any" | "yes" | "no";
+type SortMode = "date" | "open";
+
+function nextTri(s: TriState): TriState {
+  return s === "any" ? "yes" : s === "yes" ? "no" : "any";
+}
+
+function triLabel(s: TriState, yes: string, no: string): string {
+  return s === "yes" ? yes : s === "no" ? no : "";
+}
+
+function openScore(o: Order): number {
+  if (!o.is_paid) return 0;
+  if (!o.is_packed) return 1;
+  if (!o.is_collected) return 2;
+  return 3;
+}
 
 const dateFmt = new Intl.DateTimeFormat("he-IL", {
   day: "2-digit",
@@ -103,6 +125,10 @@ export function OrdersView({ orders }: { orders: Order[] }) {
   const [selectedSizes, setSelectedSizes] = useState<Set<string>>(
     () => new Set()
   );
+  const [paidFilter, setPaidFilter] = useState<TriState>("any");
+  const [packedFilter, setPackedFilter] = useState<TriState>("any");
+  const [collectedFilter, setCollectedFilter] = useState<TriState>("any");
+  const [sortMode, setSortMode] = useState<SortMode>("date");
 
   const dupeMap = useMemo(() => {
     const m = new Map<string, number>();
@@ -154,6 +180,17 @@ export function OrdersView({ orders }: { orders: Order[] }) {
     if (selectedSizes.size > 0) {
       result = result.filter((o) => selectedSizes.has(o.size));
     }
+    if (paidFilter !== "any") {
+      result = result.filter((o) => o.is_paid === (paidFilter === "yes"));
+    }
+    if (packedFilter !== "any") {
+      result = result.filter((o) => o.is_packed === (packedFilter === "yes"));
+    }
+    if (collectedFilter !== "any") {
+      result = result.filter(
+        (o) => o.is_collected === (collectedFilter === "yes")
+      );
+    }
     const q = query.trim().toLowerCase();
     if (q) {
       result = result.filter((o) => {
@@ -174,8 +211,25 @@ export function OrdersView({ orders }: { orders: Order[] }) {
         return haystack.includes(q);
       });
     }
+    if (sortMode === "open") {
+      result = [...result].sort((a, b) => {
+        const sa = openScore(a);
+        const sb = openScore(b);
+        if (sa !== sb) return sa - sb;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    }
     return result;
-  }, [orders, query, selectedProducts, selectedSizes]);
+  }, [
+    orders,
+    query,
+    selectedProducts,
+    selectedSizes,
+    paidFilter,
+    packedFilter,
+    collectedFilter,
+    sortMode,
+  ]);
 
   const totalUnits = useMemo(
     () => orders.reduce((acc, o) => acc + (o.quantity ?? 1), 0),
@@ -208,12 +262,18 @@ export function OrdersView({ orders }: { orders: Order[] }) {
     setQuery("");
     setSelectedProducts(new Set());
     setSelectedSizes(new Set());
+    setPaidFilter("any");
+    setPackedFilter("any");
+    setCollectedFilter("any");
   }
 
   const hasActiveFilters =
     query.trim().length > 0 ||
     selectedProducts.size > 0 ||
-    selectedSizes.size > 0;
+    selectedSizes.size > 0 ||
+    paidFilter !== "any" ||
+    packedFilter !== "any" ||
+    collectedFilter !== "any";
 
   if (orders.length === 0) {
     return (
@@ -326,6 +386,48 @@ export function OrdersView({ orders }: { orders: Order[] }) {
                   </Chip>
                 ))}
               </ChipRow>
+              <ChipRow label="סטטוס">
+                <TriChip
+                  state={paidFilter}
+                  onClick={() => setPaidFilter(nextTri(paidFilter))}
+                  emoji="💰"
+                  base="תשלום"
+                  yesLabel="שולם"
+                  noLabel="לא שולם"
+                />
+                <TriChip
+                  state={packedFilter}
+                  onClick={() => setPackedFilter(nextTri(packedFilter))}
+                  emoji="📦"
+                  base="אריזה"
+                  yesLabel="ארוז"
+                  noLabel="לא ארוז"
+                />
+                <TriChip
+                  state={collectedFilter}
+                  onClick={() =>
+                    setCollectedFilter(nextTri(collectedFilter))
+                  }
+                  emoji="✅"
+                  base="איסוף"
+                  yesLabel="נאסף"
+                  noLabel="לא נאסף"
+                />
+              </ChipRow>
+              <ChipRow label="מיון">
+                <Chip
+                  active={sortMode === "date"}
+                  onClick={() => setSortMode("date")}
+                >
+                  <span>חדש ביותר</span>
+                </Chip>
+                <Chip
+                  active={sortMode === "open"}
+                  onClick={() => setSortMode("open")}
+                >
+                  <span>פתוחים תחילה</span>
+                </Chip>
+              </ChipRow>
             </div>
           </div>
         </div>
@@ -390,6 +492,44 @@ function Chip({
       className={cls}
     >
       {children}
+    </button>
+  );
+}
+
+function TriChip({
+  state,
+  onClick,
+  emoji,
+  base,
+  yesLabel,
+  noLabel,
+}: {
+  state: TriState;
+  onClick: () => void;
+  emoji: string;
+  base: string;
+  yesLabel: string;
+  noLabel: string;
+}) {
+  const baseCls =
+    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer";
+  const cls =
+    state === "yes"
+      ? `${baseCls} border-emerald-500 bg-emerald-500 text-white`
+      : state === "no"
+        ? `${baseCls} border-rose-500 bg-rose-500 text-white`
+        : `${baseCls} border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50`;
+  const label =
+    state === "yes" ? yesLabel : state === "no" ? noLabel : base;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cls}
+      title={triLabel(state, yesLabel, noLabel) || base}
+    >
+      <span aria-hidden="true">{emoji}</span>
+      <span>{label}</span>
     </button>
   );
 }
@@ -498,6 +638,8 @@ function ChronoView({
                 <Th icon={Phone}>טלפון</Th>
                 <Th icon={Megaphone}>מקור</Th>
                 <Th icon={BadgeCheck}>תשלום</Th>
+                <Th icon={Box}>אריזה</Th>
+                <Th icon={CheckCircle2}>איסוף</Th>
                 <Th icon={StickyNote}>הערות</Th>
                 <Th icon={NotebookPen}>הערה לעצמי</Th>
                 <th className="px-4 py-3 font-medium" />
@@ -562,6 +704,12 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
       </td>
       <td className="px-4 py-3 text-neutral-900">
         <PaidToggle id={o.id} initial={o.is_paid} />
+      </td>
+      <td className="px-4 py-3 text-neutral-900">
+        <PackedToggle id={o.id} initial={o.is_packed} />
+      </td>
+      <td className="px-4 py-3 text-neutral-900">
+        <CollectedToggle id={o.id} initial={o.is_collected} />
       </td>
       <td className="max-w-xs whitespace-pre-wrap px-4 py-3 text-neutral-700">
         {o.notes ? (
@@ -639,7 +787,20 @@ function OrderCard({
         </p>
         <PhoneCell phone={o.phone} />
         <HeardFromEditor id={o.id} initial={o.heard_from} />
-        <PaidToggle id={o.id} initial={o.is_paid} />
+        <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-600">
+          <span className="inline-flex items-center gap-1">
+            <span className="text-neutral-400">תשלום</span>
+            <PaidToggle id={o.id} initial={o.is_paid} />
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="text-neutral-400">אריזה</span>
+            <PackedToggle id={o.id} initial={o.is_packed} />
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="text-neutral-400">איסוף</span>
+            <CollectedToggle id={o.id} initial={o.is_collected} />
+          </span>
+        </div>
         {o.notes && (
           <p className="flex items-start gap-2 whitespace-pre-wrap text-neutral-700">
             <StickyNote

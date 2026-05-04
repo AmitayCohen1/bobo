@@ -154,6 +154,32 @@ export async function updateOrderIsPaid(formData: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
+export async function updateOrderIsPacked(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  const isPacked = formData.get("is_packed") === "true";
+
+  await sql`UPDATE orders SET is_packed = ${isPacked} WHERE id = ${id}`;
+  revalidatePath("/admin");
+}
+
+export async function updateOrderIsCollected(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  const isCollected = formData.get("is_collected") === "true";
+
+  await sql`UPDATE orders SET is_collected = ${isCollected} WHERE id = ${id}`;
+  revalidatePath("/admin");
+}
+
 const ADMIN_NOTE_MAX = 2000;
 
 export async function updateOrderAdminNote(formData: FormData): Promise<void> {

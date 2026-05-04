@@ -59,15 +59,16 @@ export function SeferCard() {
               size,
             })
           }
-          className="flex h-12 w-full cursor-pointer items-center justify-center bg-brand text-[11px] font-bold uppercase text-white"
+          className="flex h-12 w-full cursor-pointer items-center justify-center bg-neutral-900 text-[11px] font-bold uppercase text-white"
         >
-          להזמנה
+          הצטרפות לרשימת המתנה
         </button>
       </div>
       <OrderFormModal
         open={draft !== null}
         order={draft}
         onClose={() => setDraft(null)}
+        mode="waitlist"
       />
     </li>
   );

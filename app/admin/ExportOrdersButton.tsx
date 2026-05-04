@@ -27,7 +27,6 @@ function escapeCsv(value: string | null | undefined): string {
 function buildCsv(orders: Order[]): string {
   const headers = [
     "תאריך",
-    "סוג",
     "מוצר",
     "מידה",
     "כמות",
@@ -44,7 +43,6 @@ function buildCsv(orders: Order[]): string {
   const rows = orders.map((o) =>
     [
       dateFmt.format(new Date(o.created_at)),
-      o.is_waitlist ? "רשימת המתנה" : "הזמנה",
       productLabel(o),
       o.size,
       String(o.quantity ?? 1),

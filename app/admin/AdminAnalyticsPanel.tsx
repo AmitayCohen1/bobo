@@ -9,9 +9,14 @@ type GroupedItem = {
   variant_type: string | null;
   color: string | null;
   size: string;
-  is_waitlist: boolean;
   count: number;
   orders: number;
+};
+type WaitlistGroupedItem = {
+  product: string;
+  variant_type: string | null;
+  color: string | null;
+  count: number;
 };
 type SizeCount = { size: string; count: number };
 type SourceCount = { heard_from: string; count: number };
@@ -34,14 +39,19 @@ export type ProductRollup = {
 
 export function AdminAnalyticsPanel({
   grouped,
+  waitlistGrouped,
   bySize,
   bySource,
 }: {
   grouped: GroupedItem[];
+  waitlistGrouped: WaitlistGroupedItem[];
   bySize: SizeCount[];
   bySource: SourceCount[];
 }) {
-  const products = useMemo(() => rollupByProduct(grouped), [grouped]);
+  const products = useMemo(
+    () => rollupByProduct(grouped, waitlistGrouped),
+    [grouped, waitlistGrouped]
+  );
   const allKeys = useMemo(() => products.map((p) => p.key), [products]);
   const defaultKeys = useMemo(
     () =>
@@ -229,11 +239,22 @@ function DistRow({
   );
 }
 
-function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
+function productKey(r: {
+  product: string;
+  variant_type: string | null;
+  color: string | null;
+}): string {
+  return `${r.product}|${r.variant_type ?? ""}|${r.color ?? ""}`;
+}
+
+function rollupByProduct(
+  rows: GroupedItem[],
+  waitlistRows: WaitlistGroupedItem[]
+): ProductRollup[] {
   const map = new Map<string, ProductRollup>();
   const sizeMap = new Map<string, Map<string, number>>();
   for (const r of rows) {
-    const key = `${r.product}|${r.variant_type ?? ""}|${r.color ?? ""}`;
+    const key = productKey(r);
     let group = map.get(key);
     if (!group) {
       group = {
@@ -256,9 +277,32 @@ function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
     }
     group.total += r.count;
     group.orders += r.orders;
-    if (r.is_waitlist) group.waitlist += r.count;
     const sizeBucket = sizeMap.get(key)!;
     sizeBucket.set(r.size, (sizeBucket.get(r.size) ?? 0) + r.count);
+  }
+  for (const w of waitlistRows) {
+    const key = productKey(w);
+    let group = map.get(key);
+    if (!group) {
+      group = {
+        key,
+        product: w.product,
+        variant_type: w.variant_type,
+        color: w.color,
+        image: imagePathFor({
+          product: w.product,
+          variantType: w.variant_type,
+          color: w.color,
+        }),
+        total: 0,
+        orders: 0,
+        waitlist: 0,
+        bySize: [],
+      };
+      map.set(key, group);
+      sizeMap.set(key, new Map());
+    }
+    group.waitlist += w.count;
   }
   const all = Array.from(map.values());
   for (const g of all) {

@@ -26,9 +26,24 @@ export type Order = {
   admin_note: string | null;
   heard_from: string | null;
   status: string;
-  is_waitlist: boolean;
   is_paid: boolean;
   is_packed: boolean;
   is_collected: boolean;
+  created_at: string;
+};
+
+export type WaitlistEntry = {
+  id: string;
+  product: string;
+  variant_type: string | null;
+  color: string | null;
+  size: string;
+  quantity: number;
+  customer_name: string;
+  phone: string;
+  notes: string | null;
+  admin_note: string | null;
+  heard_from: string | null;
+  contacted: boolean;
   created_at: string;
 };

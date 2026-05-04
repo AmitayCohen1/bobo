@@ -596,18 +596,6 @@ function DupeBadge({ count }: { count: number }) {
   );
 }
 
-function WaitlistBadge({ on }: { on: boolean }) {
-  if (!on) return null;
-  return (
-    <span
-      title="רישום לרשימת המתנה"
-      className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
-    >
-      המתנה
-    </span>
-  );
-}
-
 function ChronoView({
   orders,
   dupeMap,
@@ -683,7 +671,6 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="font-medium">{productLabel(o)}</span>
-              <WaitlistBadge on={o.is_waitlist} />
             </div>
             <DupeBadge count={dupeCount} />
           </div>
@@ -760,7 +747,6 @@ function OrderCard({
               <span className="text-[11px] text-neutral-500">
                 {dateFmt.format(new Date(o.created_at))}
               </span>
-              <WaitlistBadge on={o.is_waitlist} />
               <DupeBadge count={dupeCount} />
             </div>
             <p className="mt-1 text-sm font-medium text-neutral-900">

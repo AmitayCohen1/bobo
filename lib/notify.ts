@@ -1,6 +1,6 @@
 import { imagePathFor } from "./product-image";
 
-type OrderSummary = {
+type Summary = {
   product: string;
   variantType: string | null;
   color: string | null;
@@ -10,23 +10,15 @@ type OrderSummary = {
   phone: string;
   notes: string | null;
   heardFrom: string | null;
-  isWaitlist: boolean;
 };
 
 const SITE_URL = "https://bobo-xi-five.vercel.app";
 
-export async function notifyNewOrder(order: OrderSummary): Promise<void> {
+async function postSlack(headline: string, fallbackText: string, summary: Summary): Promise<void> {
   const url = process.env.SLACK_WEBHOOK_URL;
   if (!url) return;
 
-  const productLine = [order.product, order.color, order.variantType]
-    .filter(Boolean)
-    .join(" · ");
-  const qtyLabel = order.quantity > 1 ? ` · ×${order.quantity}` : "";
-  const headline = order.isWaitlist
-    ? `👀 *רישום לרשימת המתנה*\n*${productLine}* — מידה ${order.size}${qtyLabel}`
-    : `🎉💰 *הזמנה חדשה!*\n*${productLine}* — מידה ${order.size}${qtyLabel}`;
-  const imageUrl = `${SITE_URL}${imagePathFor(order)}`;
+  const imageUrl = `${SITE_URL}${imagePathFor(summary)}`;
 
   const blocks: unknown[] = [
     {
@@ -35,37 +27,33 @@ export async function notifyNewOrder(order: OrderSummary): Promise<void> {
       accessory: {
         type: "image",
         image_url: imageUrl,
-        alt_text: order.product,
+        alt_text: summary.product,
       },
     },
     {
       type: "section",
       fields: [
-        { type: "mrkdwn", text: `*שם:*\n${order.name}` },
-        { type: "mrkdwn", text: `*טלפון:*\n${order.phone}` },
+        { type: "mrkdwn", text: `*שם:*\n${summary.name}` },
+        { type: "mrkdwn", text: `*טלפון:*\n${summary.phone}` },
       ],
     },
   ];
 
-  if (order.notes) {
+  if (summary.notes) {
     blocks.push({
       type: "section",
-      text: { type: "mrkdwn", text: `📝 _${order.notes}_` },
+      text: { type: "mrkdwn", text: `📝 _${summary.notes}_` },
     });
   }
 
-  if (order.heardFrom) {
+  if (summary.heardFrom) {
     blocks.push({
       type: "context",
       elements: [
-        { type: "mrkdwn", text: `📣 שמע/ה עלינו דרך: *${order.heardFrom}*` },
+        { type: "mrkdwn", text: `📣 שמע/ה עלינו דרך: *${summary.heardFrom}*` },
       ],
     });
   }
-
-  const fallbackText = order.isWaitlist
-    ? `👀 רישום לרשימת המתנה: ${productLine}${qtyLabel} (${order.name})`
-    : `🎉 הזמנה חדשה: ${productLine}${qtyLabel} (${order.name})`;
 
   try {
     const res = await fetch(url, {
@@ -82,4 +70,28 @@ export async function notifyNewOrder(order: OrderSummary): Promise<void> {
   } catch (err) {
     console.error("slack notify threw", err);
   }
+}
+
+function productLine(s: Summary): string {
+  return [s.product, s.color, s.variantType].filter(Boolean).join(" · ");
+}
+
+function qtyLabel(s: Summary): string {
+  return s.quantity > 1 ? ` · ×${s.quantity}` : "";
+}
+
+export async function notifyNewOrder(order: Summary): Promise<void> {
+  const line = productLine(order);
+  const qty = qtyLabel(order);
+  const headline = `🎉💰 *הזמנה חדשה!*\n*${line}* — מידה ${order.size}${qty}`;
+  const fallbackText = `🎉 הזמנה חדשה: ${line}${qty} (${order.name})`;
+  await postSlack(headline, fallbackText, order);
+}
+
+export async function notifyNewWaitlistEntry(entry: Summary): Promise<void> {
+  const line = productLine(entry);
+  const qty = qtyLabel(entry);
+  const headline = `👀 *רישום לרשימת המתנה*\n*${line}* — מידה ${entry.size}${qty}`;
+  const fallbackText = `👀 רישום לרשימת המתנה: ${line}${qty} (${entry.name})`;
+  await postSlack(headline, fallbackText, entry);
 }

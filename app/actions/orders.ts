@@ -16,7 +16,6 @@ export type CreateOrderInput = {
   phone: string;
   notes?: string | null;
   heardFrom?: string | null;
-  isWaitlist?: boolean;
 };
 
 export type CreateOrderResult =
@@ -61,7 +60,6 @@ export async function createOrder(
   const notes = input.notes ? trim(input.notes, MAX.notes) : null;
   const heardFrom = input.heardFrom ? trim(input.heardFrom, MAX.heardFrom) : null;
   const quantity = clampQuantity(input.quantity);
-  const isWaitlist = input.isWaitlist === true;
 
   if (!product || !size) return { ok: false, error: "missing_product" };
   if (!name) return { ok: false, error: "missing_name" };
@@ -72,14 +70,12 @@ export async function createOrder(
     return { ok: false, error: "missing_heard_from" };
   }
 
-  const status = isWaitlist ? "waiting" : "new";
-
   await sql`
-    INSERT INTO orders (product, variant_type, color, size, quantity, customer_name, phone, notes, heard_from, status, is_waitlist)
-    VALUES (${product}, ${variantType}, ${color}, ${size}, ${quantity}, ${name}, ${phone}, ${notes}, ${heardFrom}, ${status}, ${isWaitlist})
+    INSERT INTO orders (product, variant_type, color, size, quantity, customer_name, phone, notes, heard_from)
+    VALUES (${product}, ${variantType}, ${color}, ${size}, ${quantity}, ${name}, ${phone}, ${notes}, ${heardFrom})
   `;
 
-  after(() => notifyNewOrder({ product, variantType, color, size, quantity, name, phone, notes, heardFrom, isWaitlist }));
+  after(() => notifyNewOrder({ product, variantType, color, size, quantity, name, phone, notes, heardFrom }));
 
   revalidatePath("/admin");
   return { ok: true };

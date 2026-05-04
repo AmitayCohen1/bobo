@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { LogOut, Package, ShieldCheck } from "lucide-react";
-import { sql, type Order } from "@/lib/db";
+import { sql, type Order, type WaitlistEntry } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
 import { ExportOrdersButton } from "./ExportOrdersButton";
 import { AdminAnalyticsPanel } from "./AdminAnalyticsPanel";
 import { OrdersView } from "./OrdersView";
+import { WaitlistView } from "./WaitlistView";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
@@ -14,20 +15,20 @@ export default async function AdminPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
 
-  const [rows, grouped, bySize, bySource] =
+  const [rows, grouped, bySize, bySource, waitlistRows, waitlistGrouped] =
     (await Promise.all([
       sql`
-        SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_waitlist, is_paid, is_packed, is_collected, created_at
+        SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_paid, is_packed, is_collected, created_at
         FROM orders
         ORDER BY created_at DESC
         LIMIT 500
       `,
       sql`
-        SELECT product, variant_type, color, size, is_waitlist,
+        SELECT product, variant_type, color, size,
                COALESCE(SUM(quantity), 0)::int AS count,
                COUNT(*)::int AS orders
         FROM orders
-        GROUP BY product, variant_type, color, size, is_waitlist
+        GROUP BY product, variant_type, color, size
         ORDER BY count DESC
       `,
       sql`
@@ -42,11 +43,25 @@ export default async function AdminPage() {
         GROUP BY heard_from
         ORDER BY count DESC
       `,
+      sql`
+        SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, contacted, created_at
+        FROM waitlist
+        ORDER BY created_at DESC
+        LIMIT 500
+      `,
+      sql`
+        SELECT product, variant_type, color,
+               COALESCE(SUM(quantity), 0)::int AS count
+        FROM waitlist
+        GROUP BY product, variant_type, color
+      `,
     ])) as [
       Order[],
-      { product: string; variant_type: string | null; color: string | null; size: string; is_waitlist: boolean; count: number; orders: number }[],
+      { product: string; variant_type: string | null; color: string | null; size: string; count: number; orders: number }[],
       { size: string; count: number }[],
       { heard_from: string; count: number }[],
+      WaitlistEntry[],
+      { product: string; variant_type: string | null; color: string | null; count: number }[],
     ];
 
   return (
@@ -92,11 +107,13 @@ export default async function AdminPage() {
 
         <div className="mt-2 space-y-4">
           <AdminAnalyticsPanel
-            grouped={grouped as { product: string; variant_type: string | null; color: string | null; size: string; is_waitlist: boolean; count: number; orders: number }[]}
-            bySize={bySize as { size: string; count: number }[]}
-            bySource={bySource as { heard_from: string; count: number }[]}
+            grouped={grouped}
+            waitlistGrouped={waitlistGrouped}
+            bySize={bySize}
+            bySource={bySource}
           />
           <OrdersView orders={rows} />
+          <WaitlistView entries={waitlistRows} />
         </div>
       </div>
     </main>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createOrder, type CreateOrderInput } from "@/app/actions/orders";
+import { createWaitlistEntry } from "@/app/actions/waitlist";
 import { imagePathFor } from "@/lib/product-image";
 
 type Mode = "order" | "waitlist";
@@ -9,7 +10,7 @@ type Mode = "order" | "waitlist";
 type Props = {
   open: boolean;
   onClose: () => void;
-  order: Omit<CreateOrderInput, "name" | "phone" | "notes" | "isWaitlist"> | null;
+  order: Omit<CreateOrderInput, "name" | "phone" | "notes"> | null;
   mode?: Mode;
 };
 
@@ -75,7 +76,7 @@ export function OrderFormModal({ open, onClose, order, mode = "order" }: Props) 
     }
     setSubmitting(true);
     setError(null);
-    const res = await createOrder({
+    const payload = {
       product: order.product,
       variantType: order.variantType ?? null,
       color: order.color ?? null,
@@ -85,8 +86,10 @@ export function OrderFormModal({ open, onClose, order, mode = "order" }: Props) 
       phone,
       notes: notes || null,
       heardFrom,
-      isWaitlist,
-    });
+    };
+    const res = isWaitlist
+      ? await createWaitlistEntry(payload)
+      : await createOrder(payload);
     setSubmitting(false);
     if (res.ok) {
       setSuccess(true);

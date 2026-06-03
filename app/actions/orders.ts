@@ -176,6 +176,23 @@ export async function updateOrderIsCollected(formData: FormData): Promise<void> 
   revalidatePath("/admin");
 }
 
+export async function updateOrderArchived(formData: FormData): Promise<void> {
+  const session = await getAdminSession();
+  if (!session) throw new Error("unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("invalid_id");
+
+  const archived = formData.get("archived") === "true";
+
+  if (archived) {
+    await sql`UPDATE orders SET archived_at = NOW() WHERE id = ${id}`;
+  } else {
+    await sql`UPDATE orders SET archived_at = NULL WHERE id = ${id}`;
+  }
+  revalidatePath("/admin");
+}
+
 const ADMIN_NOTE_MAX = 2000;
 
 export async function updateOrderAdminNote(formData: FormData): Promise<void> {

@@ -16,7 +16,7 @@ export default async function AdminPage() {
 
   const [rows, grouped, bySize, bySource] = (await Promise.all([
     sql`
-      SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_paid, is_packed, is_collected, created_at
+      SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_paid, is_packed, is_collected, archived_at, created_at
       FROM orders
       ORDER BY created_at DESC
       LIMIT 500

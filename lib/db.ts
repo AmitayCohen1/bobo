@@ -29,5 +29,6 @@ export type Order = {
   is_paid: boolean;
   is_packed: boolean;
   is_collected: boolean;
+  archived_at: string | null;
   created_at: string;
 };

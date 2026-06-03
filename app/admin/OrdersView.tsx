@@ -29,6 +29,7 @@ import { HeardFromEditor } from "./HeardFromEditor";
 import { PaidToggle } from "./PaidToggle";
 import { PackedToggle } from "./PackedToggle";
 import { CollectedToggle } from "./CollectedToggle";
+import { ArchiveOrderButton } from "./ArchiveOrderButton";
 
 type TriState = "any" | "yes" | "no";
 type SortMode = "date" | "open";
@@ -46,10 +47,6 @@ function openScore(o: Order): number {
   if (!o.is_packed) return 1;
   if (!o.is_collected) return 2;
   return 3;
-}
-
-function isClosed(o: Order): boolean {
-  return o.is_paid && o.is_packed && o.is_collected;
 }
 
 const dateFmt = new Intl.DateTimeFormat("he-IL", {
@@ -133,7 +130,7 @@ export function OrdersView({ orders }: { orders: Order[] }) {
   const [packedFilter, setPackedFilter] = useState<TriState>("any");
   const [collectedFilter, setCollectedFilter] = useState<TriState>("any");
   const [sortMode, setSortMode] = useState<SortMode>("date");
-  const [showClosed, setShowClosed] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const dupeMap = useMemo(() => {
     const m = new Map<string, number>();
@@ -179,8 +176,10 @@ export function OrdersView({ orders }: { orders: Order[] }) {
 
   const filtered = useMemo(() => {
     let result = orders;
-    if (!showClosed) {
-      result = result.filter((o) => !isClosed(o));
+    if (!showArchived) {
+      result = result.filter((o) => o.archived_at === null);
+    } else {
+      result = result.filter((o) => o.archived_at !== null);
     }
     if (selectedProducts.size > 0) {
       result = result.filter((o) => selectedProducts.has(productKey(o)));
@@ -237,17 +236,24 @@ export function OrdersView({ orders }: { orders: Order[] }) {
     packedFilter,
     collectedFilter,
     sortMode,
-    showClosed,
+    showArchived,
   ]);
 
-  const closedCount = useMemo(
-    () => orders.filter(isClosed).length,
+  const archivedCount = useMemo(
+    () => orders.filter((o) => o.archived_at !== null).length,
     [orders]
   );
 
+  const visibleScope = useMemo(
+    () =>
+      orders.filter((o) =>
+        showArchived ? o.archived_at !== null : o.archived_at === null
+      ),
+    [orders, showArchived]
+  );
   const totalUnits = useMemo(
-    () => orders.reduce((acc, o) => acc + (o.quantity ?? 1), 0),
-    [orders]
+    () => visibleScope.reduce((acc, o) => acc + (o.quantity ?? 1), 0),
+    [visibleScope]
   );
   const filteredUnits = useMemo(
     () => filtered.reduce((acc, o) => acc + (o.quantity ?? 1), 0),
@@ -335,20 +341,22 @@ export function OrdersView({ orders }: { orders: Order[] }) {
 
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-xs text-neutral-600">
-                {filtered.length === orders.length
-                  ? `${orders.length} הזמנות · ${totalUnits} יחידות`
-                  : `${filtered.length} מתוך ${orders.length} הזמנות · ${filteredUnits} מתוך ${totalUnits} יחידות`}
+                {filtered.length === visibleScope.length
+                  ? `${visibleScope.length} הזמנות · ${totalUnits} יחידות`
+                  : `${filtered.length} מתוך ${visibleScope.length} הזמנות · ${filteredUnits} מתוך ${totalUnits} יחידות`}
               </div>
               <div className="flex items-center gap-3">
-                {closedCount > 0 && (
+                {archivedCount > 0 && (
                   <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-neutral-700">
                     <input
                       type="checkbox"
-                      checked={showClosed}
-                      onChange={(e) => setShowClosed(e.target.checked)}
+                      checked={showArchived}
+                      onChange={(e) => setShowArchived(e.target.checked)}
                       className="h-4 w-4 cursor-pointer accent-neutral-900"
                     />
-                    הצג הזמנות סגורות ({closedCount})
+                    {showArchived
+                      ? `ארכיון (${archivedCount}) · הסתר`
+                      : `הצג ארכיון (${archivedCount})`}
                   </label>
                 )}
                 {hasActiveFilters && (
@@ -746,7 +754,14 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
         />
       </td>
       <td className="px-2 py-3 text-left">
-        <DeleteOrderButton id={o.id} label={o.customer_name} />
+        <div className="inline-flex flex-col items-center gap-0.5">
+          <ArchiveOrderButton
+            id={o.id}
+            label={o.customer_name}
+            archived={o.archived_at !== null}
+          />
+          <DeleteOrderButton id={o.id} label={o.customer_name} />
+        </div>
       </td>
     </tr>
   );
@@ -791,7 +806,15 @@ function OrderCard({
             </div>
           </div>
         </div>
-        <DeleteOrderButton id={o.id} label={o.customer_name} variant="full" />
+        <div className="flex flex-col gap-1.5">
+          <ArchiveOrderButton
+            id={o.id}
+            label={o.customer_name}
+            archived={o.archived_at !== null}
+            variant="full"
+          />
+          <DeleteOrderButton id={o.id} label={o.customer_name} variant="full" />
+        </div>
       </div>
       <div className="mt-3 flex flex-col gap-1.5 border-t border-neutral-100 pt-3 text-sm">
         <p className="flex items-center gap-2 text-neutral-700">

@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
 import { LogOut, Package, ShieldCheck } from "lucide-react";
-import { sql, type Order, type WaitlistEntry } from "@/lib/db";
+import { sql, type Order } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { logoutAction } from "@/app/admin/actions";
 import { ExportOrdersButton } from "./ExportOrdersButton";
 import { AdminAnalyticsPanel } from "./AdminAnalyticsPanel";
 import { OrdersView } from "./OrdersView";
-import { WaitlistView } from "./WaitlistView";
 
 export const metadata = { title: "ניהול הזמנות" };
 export const dynamic = "force-dynamic";
@@ -15,54 +14,39 @@ export default async function AdminPage() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
 
-  const [rows, grouped, bySize, bySource, waitlistRows, waitlistGrouped] =
-    (await Promise.all([
-      sql`
-        SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_paid, is_packed, is_collected, created_at
-        FROM orders
-        ORDER BY created_at DESC
-        LIMIT 500
-      `,
-      sql`
-        SELECT product, variant_type, color, size,
-               COALESCE(SUM(quantity), 0)::int AS count,
-               COUNT(*)::int AS orders
-        FROM orders
-        GROUP BY product, variant_type, color, size
-        ORDER BY count DESC
-      `,
-      sql`
-        SELECT size, COALESCE(SUM(quantity), 0)::int AS count
-        FROM orders
-        GROUP BY size
-      `,
-      sql`
-        SELECT heard_from, COALESCE(SUM(quantity), 0)::int AS count
-        FROM orders
-        WHERE heard_from IS NOT NULL AND heard_from <> ''
-        GROUP BY heard_from
-        ORDER BY count DESC
-      `,
-      sql`
-        SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, contacted, created_at
-        FROM waitlist
-        ORDER BY created_at DESC
-        LIMIT 500
-      `,
-      sql`
-        SELECT product, variant_type, color,
-               COALESCE(SUM(quantity), 0)::int AS count
-        FROM waitlist
-        GROUP BY product, variant_type, color
-      `,
-    ])) as [
-      Order[],
-      { product: string; variant_type: string | null; color: string | null; size: string; count: number; orders: number }[],
-      { size: string; count: number }[],
-      { heard_from: string; count: number }[],
-      WaitlistEntry[],
-      { product: string; variant_type: string | null; color: string | null; count: number }[],
-    ];
+  const [rows, grouped, bySize, bySource] = (await Promise.all([
+    sql`
+      SELECT id, product, variant_type, color, size, quantity, customer_name, phone, notes, admin_note, heard_from, status, is_paid, is_packed, is_collected, created_at
+      FROM orders
+      ORDER BY created_at DESC
+      LIMIT 500
+    `,
+    sql`
+      SELECT product, variant_type, color, size,
+             COALESCE(SUM(quantity), 0)::int AS count,
+             COUNT(*)::int AS orders
+      FROM orders
+      GROUP BY product, variant_type, color, size
+      ORDER BY count DESC
+    `,
+    sql`
+      SELECT size, COALESCE(SUM(quantity), 0)::int AS count
+      FROM orders
+      GROUP BY size
+    `,
+    sql`
+      SELECT heard_from, COALESCE(SUM(quantity), 0)::int AS count
+      FROM orders
+      WHERE heard_from IS NOT NULL AND heard_from <> ''
+      GROUP BY heard_from
+      ORDER BY count DESC
+    `,
+  ])) as [
+    Order[],
+    { product: string; variant_type: string | null; color: string | null; size: string; count: number; orders: number }[],
+    { size: string; count: number }[],
+    { heard_from: string; count: number }[],
+  ];
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.95),rgba(245,247,250,1)_36%,rgba(235,239,244,1)_100%)] px-3 py-3 md:px-6 md:py-4">
@@ -108,12 +92,10 @@ export default async function AdminPage() {
         <div className="mt-2 space-y-4">
           <AdminAnalyticsPanel
             grouped={grouped}
-            waitlistGrouped={waitlistGrouped}
             bySize={bySize}
             bySource={bySource}
           />
           <OrdersView orders={rows} />
-          <WaitlistView entries={waitlistRows} />
         </div>
       </div>
     </main>

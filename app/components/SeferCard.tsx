@@ -68,7 +68,6 @@ export function SeferCard() {
         open={draft !== null}
         order={draft}
         onClose={() => setDraft(null)}
-        mode="waitlist"
       />
     </li>
   );

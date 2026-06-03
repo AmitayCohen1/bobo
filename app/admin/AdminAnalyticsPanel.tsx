@@ -12,12 +12,6 @@ type GroupedItem = {
   count: number;
   orders: number;
 };
-type WaitlistGroupedItem = {
-  product: string;
-  variant_type: string | null;
-  color: string | null;
-  count: number;
-};
 type SizeCount = { size: string; count: number };
 type SourceCount = { heard_from: string; count: number };
 
@@ -33,25 +27,19 @@ export type ProductRollup = {
   image: string;
   total: number;
   orders: number;
-  waitlist: number;
   bySize: { size: string; count: number }[];
 };
 
 export function AdminAnalyticsPanel({
   grouped,
-  waitlistGrouped,
   bySize,
   bySource,
 }: {
   grouped: GroupedItem[];
-  waitlistGrouped: WaitlistGroupedItem[];
   bySize: SizeCount[];
   bySource: SourceCount[];
 }) {
-  const products = useMemo(
-    () => rollupByProduct(grouped, waitlistGrouped),
-    [grouped, waitlistGrouped]
-  );
+  const products = useMemo(() => rollupByProduct(grouped), [grouped]);
   const allKeys = useMemo(() => products.map((p) => p.key), [products]);
   const defaultKeys = useMemo(
     () =>
@@ -247,10 +235,7 @@ function productKey(r: {
   return `${r.product}|${r.variant_type ?? ""}|${r.color ?? ""}`;
 }
 
-function rollupByProduct(
-  rows: GroupedItem[],
-  waitlistRows: WaitlistGroupedItem[]
-): ProductRollup[] {
+function rollupByProduct(rows: GroupedItem[]): ProductRollup[] {
   const map = new Map<string, ProductRollup>();
   const sizeMap = new Map<string, Map<string, number>>();
   for (const r of rows) {
@@ -269,7 +254,6 @@ function rollupByProduct(
         }),
         total: 0,
         orders: 0,
-        waitlist: 0,
         bySize: [],
       };
       map.set(key, group);
@@ -279,30 +263,6 @@ function rollupByProduct(
     group.orders += r.orders;
     const sizeBucket = sizeMap.get(key)!;
     sizeBucket.set(r.size, (sizeBucket.get(r.size) ?? 0) + r.count);
-  }
-  for (const w of waitlistRows) {
-    const key = productKey(w);
-    let group = map.get(key);
-    if (!group) {
-      group = {
-        key,
-        product: w.product,
-        variant_type: w.variant_type,
-        color: w.color,
-        image: imagePathFor({
-          product: w.product,
-          variantType: w.variant_type,
-          color: w.color,
-        }),
-        total: 0,
-        orders: 0,
-        waitlist: 0,
-        bySize: [],
-      };
-      map.set(key, group);
-      sizeMap.set(key, new Map());
-    }
-    group.waitlist += w.count;
   }
   const all = Array.from(map.values());
   for (const g of all) {
@@ -400,14 +360,6 @@ function ProductRow({
               </span>
             </span>
           ))}
-          {product.waitlist > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-md border border-neutral-300 bg-white px-1.5 py-0.5">
-              <span className="tabular-nums font-semibold text-neutral-900">
-                {product.waitlist}
-              </span>
-              <span className="text-neutral-500">המתנה</span>
-            </span>
-          )}
         </div>
       </div>
     </label>

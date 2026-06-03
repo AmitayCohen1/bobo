@@ -25,7 +25,6 @@ function buildCsv(products: ProductRollup[]): string {
     "מוצר",
     "סך הכל",
     ...SIZE_ORDER,
-    "רשימת המתנה",
   ];
   const rows = products.map((p) => {
     const sizeMap = new Map(p.bySize.map((s) => [s.size, s.count]));
@@ -33,7 +32,6 @@ function buildCsv(products: ProductRollup[]): string {
       productLabel(p),
       p.total,
       ...SIZE_ORDER.map((s) => sizeMap.get(s) ?? 0),
-      p.waitlist,
     ]
       .map(escapeCsv)
       .join(",");

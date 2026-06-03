@@ -8,26 +8,19 @@ export function DeleteOrderButton({
   id,
   label,
   variant = "icon",
-  action = deleteOrder,
-  confirmText,
 }: {
   id: string;
   label: string;
   variant?: "icon" | "full";
-  action?: (formData: FormData) => Promise<void>;
-  confirmText?: (label: string) => string;
 }) {
   const [pending, startTransition] = useTransition();
 
   function onClick() {
-    const message = confirmText
-      ? confirmText(label)
-      : `למחוק את ההזמנה של ${label}?`;
-    if (!confirm(message)) return;
+    if (!confirm(`למחוק את ההזמנה של ${label}?`)) return;
     const fd = new FormData();
     fd.set("id", id);
     startTransition(() => {
-      action(fd);
+      deleteOrder(fd);
     });
   }
 

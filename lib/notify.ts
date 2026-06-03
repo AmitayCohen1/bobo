@@ -87,11 +87,3 @@ export async function notifyNewOrder(order: Summary): Promise<void> {
   const fallbackText = `🎉 הזמנה חדשה: ${line}${qty} (${order.name})`;
   await postSlack(headline, fallbackText, order);
 }
-
-export async function notifyNewWaitlistEntry(entry: Summary): Promise<void> {
-  const line = productLine(entry);
-  const qty = qtyLabel(entry);
-  const headline = `👀 *רישום לרשימת המתנה*\n*${line}* — מידה ${entry.size}${qty}`;
-  const fallbackText = `👀 רישום לרשימת המתנה: ${line}${qty} (${entry.name})`;
-  await postSlack(headline, fallbackText, entry);
-}

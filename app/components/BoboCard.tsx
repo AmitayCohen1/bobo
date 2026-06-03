@@ -61,7 +61,6 @@ export function BoboCard() {
         open={draft !== null}
         order={draft}
         onClose={() => setDraft(null)}
-        mode="waitlist"
       />
     </li>
   );

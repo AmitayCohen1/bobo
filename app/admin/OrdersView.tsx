@@ -346,19 +346,17 @@ export function OrdersView({ orders }: { orders: Order[] }) {
                   : `${filtered.length} מתוך ${visibleScope.length} הזמנות · ${filteredUnits} מתוך ${totalUnits} יחידות`}
               </div>
               <div className="flex items-center gap-3">
-                {archivedCount > 0 && (
-                  <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-neutral-700">
-                    <input
-                      type="checkbox"
-                      checked={showArchived}
-                      onChange={(e) => setShowArchived(e.target.checked)}
-                      className="h-4 w-4 cursor-pointer accent-neutral-900"
-                    />
-                    {showArchived
-                      ? `ארכיון (${archivedCount}) · הסתר`
-                      : `הצג ארכיון (${archivedCount})`}
-                  </label>
-                )}
+                <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-neutral-700">
+                  <input
+                    type="checkbox"
+                    checked={showArchived}
+                    onChange={(e) => setShowArchived(e.target.checked)}
+                    className="h-4 w-4 cursor-pointer accent-neutral-900"
+                  />
+                  {showArchived
+                    ? `ארכיון (${archivedCount}) · חזרה לפעילות`
+                    : `הצג ארכיון (${archivedCount})`}
+                </label>
                 {hasActiveFilters && (
                   <button
                     type="button"

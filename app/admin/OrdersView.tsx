@@ -48,6 +48,10 @@ function openScore(o: Order): number {
   return 3;
 }
 
+function isClosed(o: Order): boolean {
+  return o.is_paid && o.is_packed && o.is_collected;
+}
+
 const dateFmt = new Intl.DateTimeFormat("he-IL", {
   day: "2-digit",
   month: "2-digit",
@@ -129,6 +133,7 @@ export function OrdersView({ orders }: { orders: Order[] }) {
   const [packedFilter, setPackedFilter] = useState<TriState>("any");
   const [collectedFilter, setCollectedFilter] = useState<TriState>("any");
   const [sortMode, setSortMode] = useState<SortMode>("date");
+  const [showClosed, setShowClosed] = useState(false);
 
   const dupeMap = useMemo(() => {
     const m = new Map<string, number>();
@@ -174,6 +179,9 @@ export function OrdersView({ orders }: { orders: Order[] }) {
 
   const filtered = useMemo(() => {
     let result = orders;
+    if (!showClosed) {
+      result = result.filter((o) => !isClosed(o));
+    }
     if (selectedProducts.size > 0) {
       result = result.filter((o) => selectedProducts.has(productKey(o)));
     }
@@ -229,7 +237,13 @@ export function OrdersView({ orders }: { orders: Order[] }) {
     packedFilter,
     collectedFilter,
     sortMode,
+    showClosed,
   ]);
+
+  const closedCount = useMemo(
+    () => orders.filter(isClosed).length,
+    [orders]
+  );
 
   const totalUnits = useMemo(
     () => orders.reduce((acc, o) => acc + (o.quantity ?? 1), 0),
@@ -325,15 +339,28 @@ export function OrdersView({ orders }: { orders: Order[] }) {
                   ? `${orders.length} הזמנות · ${totalUnits} יחידות`
                   : `${filtered.length} מתוך ${orders.length} הזמנות · ${filteredUnits} מתוך ${totalUnits} יחידות`}
               </div>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="text-xs font-medium text-neutral-600 underline-offset-4 hover:text-neutral-900 hover:underline"
-                >
-                  נקה את כל הסינון
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {closedCount > 0 && (
+                  <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-neutral-700">
+                    <input
+                      type="checkbox"
+                      checked={showClosed}
+                      onChange={(e) => setShowClosed(e.target.checked)}
+                      className="h-4 w-4 cursor-pointer accent-neutral-900"
+                    />
+                    הצג הזמנות סגורות ({closedCount})
+                  </label>
+                )}
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="text-xs font-medium text-neutral-600 underline-offset-4 hover:text-neutral-900 hover:underline"
+                  >
+                    נקה את כל הסינון
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col gap-2.5">

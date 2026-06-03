@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  Archive,
   BadgeCheck,
   Box,
   CheckCircle2,
@@ -661,6 +662,7 @@ function ChronoView({
                 <Th icon={BadgeCheck}>תשלום</Th>
                 <Th icon={Box}>אריזה</Th>
                 <Th icon={CheckCircle2}>איסוף</Th>
+                <Th icon={Archive}>ארכיון</Th>
                 <Th icon={StickyNote}>הערות</Th>
                 <Th icon={NotebookPen}>הערה לעצמי</Th>
                 <th className="px-4 py-3 font-medium" />
@@ -731,6 +733,13 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
       <td className="px-4 py-3 text-neutral-900">
         <CollectedToggle id={o.id} initial={o.is_collected} />
       </td>
+      <td className="px-4 py-3 text-neutral-900">
+        <ArchiveOrderButton
+          id={o.id}
+          label={o.customer_name}
+          archived={o.archived_at !== null}
+        />
+      </td>
       <td className="max-w-xs whitespace-pre-wrap px-4 py-3 text-neutral-700">
         {o.notes ? (
           <span className="inline-flex items-start gap-1.5">
@@ -752,14 +761,7 @@ function OrderRow({ order: o, dupeCount }: { order: Order; dupeCount: number }) 
         />
       </td>
       <td className="px-2 py-3 text-left">
-        <div className="inline-flex flex-col items-center gap-0.5">
-          <ArchiveOrderButton
-            id={o.id}
-            label={o.customer_name}
-            archived={o.archived_at !== null}
-          />
-          <DeleteOrderButton id={o.id} label={o.customer_name} />
-        </div>
+        <DeleteOrderButton id={o.id} label={o.customer_name} />
       </td>
     </tr>
   );

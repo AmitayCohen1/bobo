@@ -40,7 +40,7 @@ export function BoboCard() {
         <h2 className="mb-1 text-[0.85rem] font-medium uppercase tracking-[-0.01em] text-neutral-900">
           חולצת &quot;מפוני הבובו&quot;
         </h2>
-        <p className="mb-2 text-[11px] text-neutral-500">₪80</p>
+        <p className="mb-2 text-[11px] text-neutral-500">₪90</p>
         <SizeSelector name="size-2" value={size} onChange={setSize} />
         <button
           type="button"

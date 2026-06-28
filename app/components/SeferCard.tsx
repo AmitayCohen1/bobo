@@ -46,7 +46,7 @@ export function SeferCard() {
           דגם &quot;מפוני קריית ספר&quot;
         </h2>
         <p className="mb-2 text-[11px] text-neutral-500">
-          {type === "חולצה" ? "₪80" : "₪100"}
+          {type === "חולצה" ? "₪90" : "₪120"}
         </p>
         <SizeSelector name="size-1" value={size} onChange={setSize} />
         <button
